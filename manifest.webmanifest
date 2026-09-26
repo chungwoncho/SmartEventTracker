@@ -1,0 +1,17 @@
+{
+  "name": "자, 오늘은 — 2026 성시경 with friends",
+  "short_name": "자, 오늘은",
+  "description": "공연 입장 안내",
+  "lang": "ko",
+  "start_url": "./#/splash",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#F6D28E",
+  "theme_color": "#B695E3",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
