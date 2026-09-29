@@ -1,0 +1,1399 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<script>
+  // 고정 사항: 브라우저 탭에서는 화면이 반드시 브라우저 상단 바 바로 아래에서 시작해야 한다 (바 밑으로 들어가면 안 된다).
+  // viewport-fit=cover 는 페이지를 안전 영역 밖(툴바·노치 밑)까지 펼치므로 홈 화면 앱(standalone)으로 열렸을 때만 켠다.
+  window.STANDALONE = !!(navigator.standalone || matchMedia('(display-mode: standalone)').matches);
+  if (STANDALONE) {
+    document.querySelector('meta[name="viewport"]').content += ', viewport-fit=cover';
+  }
+</script>
+<title>자, 오늘은 — 2026 성시경 with friends</title>
+<meta name="description" content="2026 성시경 with friends 〈자, 오늘은〉 입장 안내 앱">
+<meta name="theme-color" content="#B695E3">
+<meta property="og:type" content="website">
+<meta property="og:title" content="자, 오늘은 — 2026 성시경 with friends">
+<meta property="og:description" content="9.5 토 6PM – 9.6 일 6PM · 88잔디마당">
+<meta property="og:url" content="https://chungwoncho.github.io/SmartEventTracker/">
+<meta property="og:image" content="https://chungwoncho.github.io/SmartEventTracker/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icon-192.png" sizes="192x192">
+<link rel="apple-touch-icon" href="icon-180.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<link rel="stylesheet" as="style" crossorigin
+      href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
+<link rel="preload" href="splash.svg" as="image" type="image/svg+xml">
+
+<style>
+  /* ─── 디자인 토큰 (Figma 스타일 그대로) ─────────────────────────── */
+  :root {
+    --primary: #B695E3;        /* --color */
+    --primary-deep: #6A4A96;   /* --color-2 */
+    --point: #C18C81;          /* Point/1 */
+    --error: #E03028;
+    --p: #E5C3C3;              /* Primary/P */
+    --p3: #F7EDED;             /* Primary/P3 */
+    --code-border: #EACFCF;
+    --g1: #F9FAFC; --g2: #EFF1F4; --g3: #E4E6EA; --g5: #BEC1C7;
+    --g6: #9DA0A8; --g7: #7F828C; --g8: #5A5E6A; --g9: #3B3F4A;
+    --text: #393939; --black: #000; --white: #fff;
+
+    --gap: 12px;   /* --간격 */
+    --gap2: 20px;  /* --간격2 */
+    --gap3: 24px;  /* --간격3 */
+    --gap4: 28px;  /* --간격4 */
+    --gap5: 40px;  /* --간격5 */
+
+    /* 디자인의 47px 상태바 높이는 OS 영역이므로 safe-area 로 치환 */
+    --sb: env(safe-area-inset-top, 0px);
+    --sbb: env(safe-area-inset-bottom, 0px);
+    --side: 21px;
+    color-scheme: light;
+  }
+
+  * { box-sizing: border-box; }
+  html { -webkit-text-size-adjust: 100%; text-size-adjust: 100%; }
+  html, body { margin: 0; height: 100%; overflow: hidden; overscroll-behavior: none; touch-action: manipulation; }
+  /* iOS Chrome 은 html/body 의 100% 를 하단 툴바까지 포함한 큰 뷰포트로 계산하고 .app 의 100dvh 는 실제 보이는 높이로 계산해서,
+     문서가 .app 보다 툴바 높이만큼 길어졌다. 그러면 문서가 그만큼 스크롤돼 화면 위가 주소창 밑으로 들어가고 아래에 body 배경 띠가 생긴다.
+     html/body 도 .app 과 같은 100dvh 로 맞춰 문서에 남는 높이가 없게 한다 (고정 사항 1: 화면은 주소창 바로 아래에서 시작). */
+  @supports (height: 100dvh) { html, body { height: 100dvh; } }
+  body {
+    font-family: "Pretendard Variable", Pretendard, -apple-system, BlinkMacSystemFont,
+                 "Apple SD Gothic Neo", "Noto Sans KR", "Malgun Gothic", sans-serif;
+    font-size: 16px; line-height: 1.5; color: var(--black);
+    background: #ECEBF0;
+    -webkit-font-smoothing: antialiased;
+  }
+  /* 고정 사항 (절대 바꾸지 않는다): 화면은 브라우저 상단 바 바로 아래에서 시작해 하단 바 바로 위까지 채운다.
+     - body 에 position: fixed 를 쓰지 않는다. iOS Chrome 에서 고정 배치는 웹뷰 맨 위(상단 바 밑)를 기준으로 잡혀
+       화면 윗부분이 바에 가려지고 아래에 빈 띠가 생긴다. 일반 흐름의 문서는 브라우저가 항상 바 아래에서 시작시킨다.
+     - 문서 자체는 스크롤되지 않게 html·body 를 overflow: hidden 으로 두고, 스크롤은 .app 안에서만 한다
+       (주소창 접힘·바운스로 인한 리사이즈 차단).
+     - 높이는 100dvh (바를 뺀 실제 보이는 높이). 브라우저 탭에서는 viewport-fit=cover 를 켜지 않는다 (<head> 스크립트). */
+  h1, h2, p { margin: 0; }
+  a { color: inherit; text-decoration: none; }
+  button, input { font: inherit; color: inherit; }
+  button { cursor: pointer; border: 0; background: none; padding: 0; }
+  input { border: 0; background: none; padding: 0; outline: 0; width: 100%; min-width: 0; }
+  input::placeholder { color: var(--g6); }
+  input, button, a { touch-action: manipulation; }
+
+  /* ─── 앱 셸: 414 프레임, 데스크탑에서는 가운데 정렬 ─────────────── */
+  .app {
+    position: relative; width: 100%; height: 100vh; height: 100dvh;
+    margin: 0 auto; background: var(--g1);
+    overflow-x: hidden; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain; touch-action: pan-y;
+  }
+  @media (min-width: 600px) {
+    .app { max-width: 414px; box-shadow: 0 0 0 1px rgba(0,0,0,.06), 0 24px 60px rgba(60,40,90,.18); }
+  }
+  .screen { display: none; position: relative; min-height: 100%; }
+  .screen.active { display: block; }
+  .screen.flex-col { display: none; flex-direction: column; }
+  .screen.flex-col.active { display: flex; }
+
+  /* ─── 타이포 ────────────────────────────────────────────────────── */
+  .h5 { font-size: 20px; font-weight: 700; }
+  .h6 { font-size: 18px; font-weight: 600; }
+  .b1 { font-size: 16px; font-weight: 400; }
+  .b1m { font-size: 16px; font-weight: 500; }
+  .b1b { font-size: 16px; font-weight: 700; }
+  .b2 { font-size: 14px; font-weight: 400; }
+  .b2m { font-size: 14px; font-weight: 500; }
+  .b2s { font-size: 14px; font-weight: 600; }
+  .cap { font-size: 12px; font-weight: 400; }
+  .ellipsis { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+  /* ─── 공통 컴포넌트 ─────────────────────────────────────────────── */
+  .btn {
+    display: flex; align-items: center; justify-content: center;
+    border-radius: 8px; padding: 0 12px; font-weight: 600; white-space: nowrap;
+    transition: filter .15s, transform .05s;
+  }
+  .btn:active { transform: scale(.985); filter: brightness(.96); }
+  .btn-xl { height: 56px; font-size: 18px; }
+  .btn-l  { height: 48px; font-size: 16px; }
+  .btn-primary { background: var(--primary); color: var(--white); }
+  .btn-outline { background: transparent; border: 1px solid var(--primary); color: var(--primary); }
+  .btn-gray { background: var(--g2); color: var(--g9); }
+  .btn-block { width: 100%; }
+
+  .field { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+  .field > label { font-size: 14px; font-weight: 500; color: var(--g8); height: 21px; white-space: nowrap; }
+  .input {
+    display: flex; align-items: center; height: 48px; padding: 0 16px;
+    border-radius: 8px; background: var(--g2); font-size: 14px; color: var(--black);
+  }
+  .input.readonly { color: var(--g8); }
+  .input.white { background: var(--white); border: 1px solid transparent; }
+  .input.white.filled { background: var(--g2); }   /* 값이 들어오면 회색 채움 (Figma 503:5328 '입력 후') */
+  /* 입력 중(포커스)에는 시안(503:5432)처럼 흰 바탕에 분홍 테두리 */
+  .input.white:focus-within { background: var(--white); border-color: var(--code-border); }
+  .btn:disabled { opacity: .6; cursor: default; pointer-events: none; }
+  .input.outlined { background: var(--white); border: 1px solid var(--code-border); }
+  /* 인증코드 6자리 입력이 끝나면 분홍 테두리가 사라지고 회색 채움·검정 숫자 (503:5376 흐름) */
+  .input.outlined.done { background: var(--g2); border-color: transparent; color: var(--black); }
+  .input.center { justify-content: center; text-align: center; }
+  .input input { height: 21px; }
+  .field .hint { padding-left: 8px; font-size: 12px; color: var(--g7); }
+  /* 오류 상태 (Figma 503:5503): 칸 테두리와 안내 문구를 System Color/Error 로 */
+  .input.error, .input.white.error:focus-within { border: 1px solid var(--error); }
+  .field .hint.error { color: var(--error); }
+
+  .card {
+    background: var(--white); border-radius: 10px;
+    box-shadow: 0 0 7px rgba(0,0,0,.10); padding: var(--gap2);
+  }
+
+  /* ─── 1. 스플래쉬 ────────────────────────────────────────────────── */
+  #splash { background: #F6D28E; }
+  #splash img {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    object-fit: cover; display: block; user-select: none; -webkit-user-drag: none;
+  }
+  #splash .tap { position: absolute; inset: 0; }
+
+  /* ─── 2. 전화번호 인증 (Figma 503:5424 '2-1 입력전' → 발송 후 인증코드 단계) ─────
+     입력 전: 이름·전화번호 흰 빈 칸, '인증번호 발송하기' 비활성, 인증코드 칸과 하단 버튼 없음.
+     둘 다 채우면 발송 버튼이 켜지고, 발송하면 재발송 버튼으로 바뀌며 인증코드 칸·타이머·'전화번호 인증하기' 가 나타난다 */
+  #verify { padding: calc(var(--sb) + 86px) var(--side) 40px; }
+  #verify [hidden] { display: none; }
+  #verify .title { text-align: center; color: var(--text); }
+  #verify .form { display: flex; flex-direction: column; gap: var(--gap4); margin-top: var(--gap5); }
+  #verify .group { display: flex; flex-direction: column; gap: var(--gap3); }
+  #verify .submit { margin-top: 10px; }   /* form gap 28 + 10 = 시안(503:5376)의 38: 타이머 아래 584 → 버튼 622 */
+
+  /* ─── 10·11. 내 정보 — 사용자 정보 수정 (Figma 468:5144 / 468:5156). 홈·스토어의 이름 버튼으로 연다 ───
+     헤더 58(뒤로 화살표 24 · 제목 · 오른쪽 빈 자리) → 28 → 안내 문구 → 40 → 필드(사이 24) → … 아래 버튼은 화면 바닥에서 36 */
+  .profile { padding-top: var(--sb); }
+  .profile.active { display: flex; }
+  .profile .header .back, .profile .header .spacer { flex: none; width: 44px; height: 44px; margin: 0 -10px; }
+  .profile .header .back { display: flex; align-items: center; justify-content: center; border-radius: 50%; -webkit-tap-highlight-color: transparent; }
+  .profile .header .back img { display: block; width: 24px; height: 24px; }
+  .profile .header .back:active { opacity: .5; }
+  .profile .body { flex: 1 0 auto; display: flex; flex-direction: column; padding: 28px var(--side) calc(36px + var(--sbb)); }
+  .profile .heading { text-align: center; color: var(--text); }
+  .profile .stack { display: flex; flex-direction: column; gap: var(--gap4); margin-top: var(--gap5); }
+  .profile .group { display: flex; flex-direction: column; gap: var(--gap3); }
+  .profile .bottom { margin-top: auto; padding-top: 24px; display: flex; gap: var(--gap); }
+  .profile .bottom .btn { flex: 1 1 0; min-width: 0; }
+  .profile .bottom .btn-gray { flex: 0 0 116px; }   /* 시안: 뒤로 116 · 완료 244 */
+
+  /* ─── 3. 예매티켓 확인 ───────────────────────────────────────────── */
+  #ticket { padding: var(--sb) 0 0; flex-direction: column; }
+  #ticket.active { display: flex; }
+  .header {
+    display: flex; align-items: center; gap: var(--gap); height: 58px; padding: 0 var(--side);
+  }
+  .header .title { flex: 1; text-align: center; font-size: 20px; font-weight: 700; }
+  .progress { position: relative; height: 6px; background: var(--g2); border-radius: 3px; overflow: hidden; }
+  .progress > i { position: absolute; inset: 0; background: var(--primary); border-radius: 10px; transform-origin: left; }
+  /* 시안(3:3609): 진행 바 아래 30 → 안내 문구 → 24 → 버튼 두 개(사이 16) → 16 → 구분선 → 40 → 확인 영역 */
+  #ticket .body { padding: 30px var(--side) 24px; display: flex; flex-direction: column; flex: 1 0 auto; }
+  #ticket .notfound { display: flex; flex-direction: column; align-items: center; gap: var(--gap3); }
+  #ticket .notfound .h6 { font-weight: 700; }   /* 시안: 18px Bold */
+  #ticket .notfound .choices { display: flex; flex-direction: column; gap: 16px; width: 100%; }
+  /* 두 버튼은 세 단계: 대기(투명 바탕·검정 글씨) → 한 번 누르면 선택(보라 선·보라 글씨, 시안 503:5506) → 다시 누르면 확정(보라 채움·흰 글씨).
+     한쪽을 선택하면 다른 쪽은 대기로 돌아간다. 화면에 들어오면 시안처럼 구매하기가 선택 상태 */
+  #ticket .choice { background: transparent; border: 1px solid transparent; color: var(--g9); transition: background .15s, color .15s, border-color .15s; }
+  #ticket .choice[data-state="selected"] { border-color: var(--primary); color: var(--primary); }
+  #ticket .choice[data-state="filled"] { background: var(--primary); border-color: var(--primary); color: var(--white); }
+  #ticket .divider { height: 0; margin-top: 16px; border-top: 1px solid var(--g3); }
+  #ticket .confirm { margin-top: 40px; }
+  #ticket .confirm { display: flex; flex-direction: column; align-items: center; gap: var(--gap3); }
+  #ticket .confirm .h6 { color: var(--text); }
+  #ticket .datetime { display: flex; gap: var(--gap); align-items: flex-end; width: 100%; }
+  #ticket .datetime .field { flex: 1 1 0; min-width: 0; }
+  #ticket .datetime .input { padding: 0 8px; }
+  .chip { display: flex; align-items: center; justify-content: center; height: 44px; border-radius: 8px;
+          background: var(--g2); font-size: 16px; font-weight: 500; color: var(--g8); }
+  .bottom-actions {
+    position: sticky; bottom: 0; margin-top: auto; z-index: 2;
+    display: flex; gap: var(--gap);
+    padding: 16px var(--side) max(33px, calc(var(--sbb) + 12px));
+    background: linear-gradient(to bottom, rgba(249,250,252,0) 0, var(--g1) 16px);
+  }
+  .bottom-actions .back { width: 116px; flex: 0 0 116px; }
+  .bottom-actions .next { flex: 1; }
+
+  /* ─── 4·5. 입장번호 생성 / 입장번호 ──────────────────────────────── */
+  .center-stage { align-items: center; justify-content: center; padding: var(--sb) var(--side) var(--sbb); }
+  .center-stage .inner { display: flex; flex-direction: column; align-items: center; gap: var(--gap5); }
+  .center-stage .msg { display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--text); text-align: center; }
+  .ring { position: relative; width: 250px; height: 250px; }
+  .ring svg { display: block; width: 100%; height: 100%; overflow: visible; }
+  .ring .arc { transform-origin: 125px 125px; animation: spin 1.4s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .ring .num {
+    position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: 48px; font-weight: 700; color: var(--error); line-height: 1.5;
+  }
+  @media (prefers-reduced-motion: reduce) { .ring .arc { animation: none; } }
+
+  /* ─── 6·7. 입장정보 / 스토어 ─────────────────────────────────────── */
+  .info { background: var(--primary); flex-direction: column; }
+  .info.active { display: flex; }
+  .info .panel {
+    position: absolute; left: 0; right: 0; bottom: 0; top: calc(var(--sb) + 203px);
+    background: var(--g1); border-radius: 10px 10px 0 0;
+  }
+  .info .header {
+    position: sticky; top: 0; z-index: 3; flex: 0 0 auto;
+    margin-top: 0; padding-top: var(--sb); height: calc(58px + var(--sb));
+    background: var(--primary);
+  }
+  .info .header .name { display: flex; align-items: center; gap: 8px; flex: 1; opacity: .8;
+                        font-size: 20px; font-weight: 700; color: var(--primary-deep); }
+  .info .content {
+    position: relative; padding: 12px var(--side) calc(var(--nav-clear) + 16px); flex: 1 0 auto;
+    display: flex; flex-direction: column; gap: 40px;
+  }
+  .info .cards { display: flex; flex-direction: column; gap: 16px; }
+  .countdown { display: flex; align-items: center; }
+  .countdown .txt { flex: 1; display: flex; align-items: center; justify-content: center; gap: var(--gap); white-space: nowrap; }
+  .countdown .txt .label { font-size: 14px; font-weight: 600; color: var(--g8); }
+  .countdown .txt .min { flex: 1; text-align: center; font-size: 16px; font-weight: 700; color: var(--error); }
+  .countdown .spacer { width: 24px; height: 24px; flex: 0 0 24px; }
+  .help { display: flex; flex-direction: column; align-items: center; gap: var(--gap4); }
+  .help .h5 { color: var(--text); }
+  .search {
+    display: flex; align-items: center; gap: 12px; width: 100%; height: 48px; padding: 0 16px;
+    background: var(--white); border: 1px solid var(--p3); border-radius: 24px;
+  }
+  .search svg { flex: 0 0 20px; width: 20px; height: 20px; }
+  .search input { font-size: 14px; }
+  .info .fields { display: flex; flex-direction: column; gap: var(--gap3); }
+  /* 안내 문구 (Figma 5:3855) — 24px 한 줄 */
+  .info .note { height: 24px; display: flex; align-items: center; justify-content: center;
+                text-align: center; color: var(--g9); font-size: 16px; }
+  /* 홈(5:3811, 2026-09-26 개정)의 세로 배치 — 시안(414×896)의 간격 그대로 고정.
+     헤더 58 → 12 → 카드 226 → 40 → 안내 문구 24 → 40 → 필드 178. 그 아래는 빈 공간이고,
+     내비(왼쪽 아래)와 티켓 버튼(오른쪽 아래)은 화면 맨 아래에 떠 있다.
+     콘텐츠 아래 여백 79 = 내비 57 + 아래 22 라서 작은 화면에서 스크롤돼도 필드가 내비 밑에 깔리지 않는다. */
+  #entry .content { padding: 0 var(--side) calc(79px + var(--sbb)); gap: 0; }
+  #entry .cards { margin-top: 12px; }
+  #entry .note { margin-top: 40px; }
+  #entry .fields { margin-top: 40px; }
+
+  /* 떠 있는 원형 버튼 — 홈의 티켓 버튼(Figma 5:4234, x334 y811)과 먹거리의 카트 버튼(457:4617, x332 y813). 지름 60 원.
+     화면 오른쪽 아래(오른쪽 20, 아래 25)에 내비와 나란히 떠 있다. SVG 는 그림자까지 포함해 74×74 라서 사방으로 7px 씩 넘치게 둔다 */
+  .fab {
+    position: absolute; right: 20px; bottom: calc(25px + var(--sbb)); width: 60px; height: 60px;
+    border-radius: 50%; -webkit-tap-highlight-color: transparent; transition: transform .05s;
+  }
+  .fab img { position: absolute; left: -7px; top: -7px; width: 74px; height: 74px; max-width: none; display: block; }
+  .fab:active { transform: scale(.96); }
+
+  /* 하단 내비 — 화면 왼쪽 아래에 떠 있는 가로 알약 탭바(먹거리·홈·스토어). 크기·위치는 Figma 시안(5:4230, x21 y817) 그대로:
+     291×57, 모서리 28, 화면 왼쪽에서 21px·아래에서 22px. 오른쪽 아래에는 티켓 버튼이 나란히 있다. 아이콘만 있고 라벨은 없다.
+     고정 사항: 재질은 시안의 흰 배경 대신 iOS 26 Liquid Glass 로 유지한다. */
+  :root { --nav-clear: calc(89px + var(--sbb)); }   /* 탭바 57 + 아래 22 + 위 여유 10. 콘텐츠 아래 여백에 쓴다 */
+  /* 화면 맨 아래에 붙는 높이 0 짜리 기준점. 실제 내비는 .nav-col 이 이 기준점 위로 떠 있다 */
+  .bottom-nav { position: sticky; bottom: 0; margin-top: auto; z-index: 3; flex: 0 0 0; height: 0; width: 100%; }
+  .nav-col {
+    position: absolute; left: var(--side); bottom: calc(22px + var(--sbb));
+    display: flex; flex-direction: column; align-items: flex-start; pointer-events: none;
+  }
+  .nav-col > * { pointer-events: auto; }
+
+  /* ─ Apple Liquid Glass (iOS 26 탭 바, 라이트 모드 · 2026-09-28 참고 스크린샷 기준) ─
+     거의 흰색에 가까운 프로스티드 글래스: 흰 반투명 바탕 위로 뒤 콘텐츠가 흐릿하게 비친다.
+     ::before — 가장자리 굴절 림: 위쪽은 밝은 흰 선, 아래로 갈수록 옅어지는 1px 테두리(마스크로 링만 남김).
+     ::after  — 유리 두께감: 위쪽 안쪽 하이라이트, 위에서 퍼지는 부드러운 광택, 바깥 윤곽은 아주 옅은 회색.
+     그림자는 부드럽고 옅게. */
+  .glass {
+    position: relative; isolation: isolate;
+    background: rgba(255,255,255,.70);
+    -webkit-backdrop-filter: blur(24px) saturate(160%);
+    backdrop-filter: blur(24px) saturate(160%);
+    border-radius: 999px;
+    box-shadow: 0 8px 24px rgba(0,0,0,.07), 0 1px 3px rgba(0,0,0,.04);
+  }
+  .glass::before, .glass::after { content: ''; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; }
+  .glass::before {
+    padding: 1px;
+    background: linear-gradient(180deg, rgba(255,255,255,1) 0%, rgba(255,255,255,.55) 45%, rgba(255,255,255,.25) 100%);
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor; mask-composite: exclude;
+    z-index: 2;
+  }
+  .glass::after {
+    background: radial-gradient(130% 100% at 50% -30%, rgba(255,255,255,.55), rgba(255,255,255,0) 60%);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,.9), 0 0 0 1px rgba(0,0,0,.035);
+    z-index: 1;
+  }
+  /* 선택된 탭 뒤의 작은 유리 알약(iOS 26 의 선택 캡슐). 탭 폭(=(전체 − 좌우 21)/3)과 같다.
+     탭을 바꾸면 iOS 26 기본 탭 바처럼 움직인다 (.lift):
+       1) 캡슐이 바 밖으로 커지며 맑은 렌즈처럼 떠오르고 (밑의 아이콘도 함께 확대되어 굴절된 것처럼 보인다)
+       2) 떠오른 채 새 탭 자리로 미끄러져 살짝 넘쳤다가
+       3) 스프링처럼 다시 바 안으로 가라앉는다. 전체 약 0.55초.
+     바깥 .pill 은 가로 이동(transition), 안쪽 i 는 크기·재질 변화(animation)를 맡는다 */
+  .tabbar .pill {
+    position: absolute; left: 21px; top: 5px; bottom: 5px; width: calc((100% - 42px) / 3); z-index: 0; pointer-events: none;
+    transition: transform .42s cubic-bezier(.32,1.25,.4,1);
+  }
+  /* 선택 캡슐은 바보다 '덜 흰' 반투명 회색 — 흰 유리 위에 살짝 가라앉은 자리처럼 보이고, 뒤 콘텐츠가 그만큼 더 비친다 */
+  .tabbar .pill i {
+    position: absolute; inset: 0; display: block; border-radius: 999px;
+    background: rgba(0,0,0,.065);
+    box-shadow: inset 0 0 0 .5px rgba(255,255,255,.35);
+  }
+  .tabbar .pill.lift i { animation: pill-lift .55s cubic-bezier(.3,.9,.3,1) both; }
+  /* 크기는 transform 대신 inset 으로 키운다 — 비율로 늘리면 둥근 끝이 찌그러지므로.
+     렌즈는 바 안에서만 커진다(위아래 5px 여백을 1px 만 남기고 채움). 바 밖으로 나가지 않도록 .tabbar 도 overflow: hidden */
+  @keyframes pill-lift {
+    0%        { inset: 0; }
+    20%, 60%  { inset: -4px -2px;
+                background: rgba(255,255,255,.55);
+                box-shadow: 0 8px 20px rgba(0,0,0,.12), 0 0 0 1px rgba(255,255,255,.95),
+                            inset 0 1.5px 1px rgba(255,255,255,1), inset 0 -2px 3px rgba(0,0,0,.06), inset 0 0 10px rgba(255,255,255,.55); }
+    82%       { inset: 1px 1.5px; }
+    100%      { inset: 0; }
+  }
+  /* 렌즈 밑을 지나는 새 탭의 아이콘은 같은 박자로 확대됐다가 돌아온다 */
+  .bottom-nav .tab.lift .ico { animation: ico-lift .55s cubic-bezier(.3,.9,.3,1) both; }
+  @keyframes ico-lift {
+    0% { transform: scale(1); } 20%, 60% { transform: scale(1.3); } 82% { transform: scale(.98); } 100% { transform: scale(1); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tabbar .pill { transition: none; }
+    .tabbar .pill.lift i, .bottom-nav .tab.lift .ico { animation: none; }
+  }
+  /* 시안의 위 12·아래 21 여백은 홈 인디케이터 몫이라 바가 이미 떠 있는 여기서는 아이콘을 위아래 가운데로 맞춘다.
+     좁은 화면에서는 왼쪽 21 과 오른쪽 티켓 버튼 자리(사이 12 + 60 + 20)를 남기고 줄어든다 */
+  .tabbar { flex: none; width: 291px; max-width: calc(100vw - 113px); height: 57px; display: flex; padding: 0 21px; overflow: hidden; }
+  .bottom-nav .tab {
+    position: relative; z-index: 1; flex: 1 1 0; min-width: 0; height: 100%; border-radius: 999px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--black); transition: color .2s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .bottom-nav .tab .ico { transition: transform .15s; }
+  .bottom-nav .tab:active .ico { transform: scale(.9); }
+  /* 아이콘 자리는 24px. 시안 크기대로 먹거리·스토어 16, 홈(채움) 24, 홈(선) 16.7×18.3 */
+  .bottom-nav .tab .ico { width: 24px; height: 24px; display: flex; align-items: center; justify-content: center; }
+  .bottom-nav .tab svg { flex: none; width: 16px; height: 16px; display: block; }
+  .bottom-nav .tab svg.home-line { width: 16.7px; height: 18.3px; }
+  .bottom-nav .tab svg.home-solid { width: 24px; height: 24px; }
+  .bottom-nav .tab svg path { fill: currentColor; }
+  /* 활성 탭은 채운(filled) 아이콘, 나머지는 선 아이콘 (먹거리 fluent:food-16-filled · 홈 basil:home-solid · 스토어 ep:goods-filled) */
+  .bottom-nav .tab .on { display: none; }
+  .bottom-nav .tab[aria-current="page"] .on { display: block; }
+  .bottom-nav .tab[aria-current="page"] .off:not(:only-child) { display: none; }
+  .bottom-nav .tab[aria-current="page"] { color: var(--black); }
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    .glass { background: rgba(255,255,255,.96); }
+  }
+
+  /* ─── 7. 입장티켓 바코드 (Figma 380:3966 / 카드 464:3820, 2026-09-28 개정) ─────────────
+     보라 바탕 화면 세로 가운데에 가로 372×269.25 흰 카드(모서리 10, 좌우 21)가 떠 있고 그 안 가운데에 바코드(303×227.25, 세로 줄무늬).
+     닫기 아이콘(468:5117 fa7-solid:remove, 48)은 화면 오른쪽 위 (오른쪽 21, 상태바 아래 21). 카드 바깥 보라 바탕·Esc·뒤로가기로도 닫힌다 */
+  #barcode { background: var(--primary); }
+  #barcode .dialog { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; }
+  #barcode .dialog:focus { outline: none; }
+  #barcode .sheet {
+    position: relative; flex: none; width: 372px; max-width: calc(100% - 42px); height: 269.25px;
+    display: flex; align-items: center; justify-content: center; overflow: hidden;
+    background: var(--g1); border-radius: 10px;
+    animation: sheet-up .28s cubic-bezier(.2,.8,.2,1) both;
+  }
+  #barcode .close {
+    position: absolute; right: var(--side); top: calc(var(--sb) + 21px);
+    width: 48px; height: 48px; border-radius: 50%; display: flex; align-items: center; justify-content: center;
+    -webkit-tap-highlight-color: transparent;
+  }
+  #barcode .close img { display: block; width: 48px; height: 48px; }
+  #barcode .close:active { opacity: .5; }
+  /* 포커스는 대화상자가 받는다. 링은 키보드로 이동했을 때만, 기본 사각 테두리 대신 버튼 모양에 맞춰 그린다 */
+  #barcode .close:focus-visible { outline: 2px solid var(--primary-deep); outline-offset: -2px; }
+  .fab:focus-visible { outline: 2px solid var(--primary-deep); outline-offset: 3px; }
+  /* 바코드(303×227.25) 는 카드 가운데. 좁은 카드에서는 좌우 21 을 남기고 비율대로 줄어든다 */
+  #barcode .code { flex: none; width: 303px; max-width: calc(100% - 42px); aspect-ratio: 303 / 227.25; }
+  #barcode .code img { display: block; width: 100%; height: 100%; }
+  @keyframes sheet-up { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+  @media (prefers-reduced-motion: reduce) { #barcode .sheet { animation: none; } }
+
+  /* ─── 8. MD 스토어 (Figma 26:7721, 2026-09-29) — 진행 바 아래 18 부터 181×318 상품 카드 2×3 (음식 주문 카드와 같은 틀) ───
+     상품 사진 틀(139, 흰 바탕, 모서리 8) 안에 응원봉 사진이 69×149 로 (36, 0) 에 놓여 아래가 잘린다 → 비율로 환산해 카드 폭에 따라 같이 줄어든다 */
+  #store { padding-top: var(--sb); }
+  #store .body { flex: 1 0 auto; padding: 0 0 calc(var(--nav-clear) + 16px); }
+  #store .menu-grid { margin-top: 18px; }   /* 진행 바 아래 18 (시안 129 − 111) */
+  #store .menu-card .desc { font-size: 15px; }
+  #store .menu-card .time img { width: 14px; height: 14px; }
+  .menu-card .photo-box { position: relative; margin-top: 8px; width: 100%; aspect-ratio: 1; border-radius: 8px; background: var(--white); overflow: hidden; }
+  .menu-card .photo-box img { position: absolute; left: 25.9%; top: 0; width: 49.64%; height: 107.2%; object-fit: cover; display: block; max-width: none; }
+
+  /* ─── 12. 장바구니 (Figma 380:3796, 2026-09-29 개정) — 음식 주문·스토어의 카트 버튼으로 연다 ─────────
+     '장바구니' 헤더 + 진행 바 → 20 → '음식'(36 줄) → 카드 → 20 → '함께 먹어요'(36 줄) → 카드 → 83 → 'MD 스토어'(36 줄) → 카드 */
+  #cart { padding-top: var(--sb); }
+  #cart .body { flex: 1 0 auto; padding: 20px var(--side) 24px; }
+  #cart .section { margin: 0; height: 36px; line-height: 36px; font-size: 16px; font-weight: 700; color: var(--black); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #cart .section.sub { font-size: 14px; color: var(--g9); }
+  #cart .cart-item + .section { margin-top: 20px; }
+  #cart .cart-item + .section.store { margin-top: 83px; }
+  /* 결제 금액 패널(526:5706): 화면 바닥에 붙는 흰 시트 414×175(모서리 10, 그림자). 글은 위 32, 좌우 41 에 16 Bold Gray9.
+     그 아래 '주문하기' XL 버튼(468:5086): 다른 화면의 바닥 버튼과 같은 자리(좌우 21, 아래 36 = 패널 위에서 83) */
+  #cart .pay {
+    position: sticky; bottom: 0; margin-top: auto; z-index: 2; flex: none;
+    height: calc(175px + var(--sbb)); padding: 32px 41px 0; border-radius: 10px 10px 0 0;
+    background: var(--white); box-shadow: 0 0 7px rgba(0,0,0,.10);
+  }
+  #cart .pay .sum {
+    display: flex; justify-content: space-between; align-items: flex-start;
+    font-size: 16px; font-weight: 700; line-height: 1.5; color: var(--g9); white-space: nowrap;
+  }
+  #cart .pay .order { position: absolute; left: var(--side); right: var(--side); top: 83px; }
+  .cart-item {
+    position: relative; height: 116px; padding: 18px 16px 16px 16px;
+    background: var(--white); border-radius: 10px; box-shadow: 0 0 7px rgba(0,0,0,.10);
+  }
+  .cart-item .photo { position: absolute; left: 16px; top: 18px; width: 80px; height: 80px; border-radius: 8px; object-fit: cover; display: block; }
+  .cart-item .photo.contain { object-fit: contain; }
+  /* 글은 사진 오른쪽 117 부터. 이름 18 Bold(21) → 설명 14(47) → 가격(76) */
+  .cart-item .name { position: absolute; left: 117px; top: 21px; margin: 0; font-size: 18px; font-weight: 700; line-height: 21px; color: var(--black); white-space: nowrap; }
+  .cart-item .desc { position: absolute; left: 117px; top: 47px; font-size: 14px; line-height: 17px; color: var(--black); white-space: nowrap; }
+  .cart-item .price { position: absolute; left: 117px; top: 76px; font-size: 20px; font-weight: 800; line-height: 24px; color: var(--black); white-space: nowrap; }
+  .cart-item.small .price { top: 79px; font-size: 18px; line-height: 21px; }
+  /* 수량 조절(489:3862): 오른쪽 16, 아래 16, 120×36, 연회색 바탕. 양끝에 36 네모 ±, 가운데 수량 */
+  .cart-item .qty {
+    position: absolute; right: 16px; bottom: 16px; width: 120px; height: 36px; border-radius: 10px; background: var(--g1);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  .cart-item .qty button { width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; -webkit-tap-highlight-color: transparent; }
+  .cart-item .qty button img { display: block; width: 36px; height: 36px; }
+  .cart-item .qty button:active img { opacity: .5; }
+  .cart-item .qty .count { flex: 1; text-align: center; font-size: 16px; font-weight: 600; color: var(--black); }
+
+  /* ─── 9. 사전 음식 주문 (Figma 25:7580, 2026-09-28 개정) ───────────────────────── */
+  #food { padding-top: var(--sb); }
+  #food .body { flex: 1 0 auto; padding: 0 0 calc(var(--nav-clear) + 16px); }
+  /* 카테고리 띠(462:4807): 75 타일이 16 간격으로 가로로 이어지고 화면을 넘치면 가로 스크롤. 진행 바 아래 26, 왼쪽 22 부터 */
+  .food-cats {
+    display: flex; gap: 16px; padding: 26px var(--side) 0 22px; overflow-x: auto; overscroll-behavior-x: contain;
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .food-cats::-webkit-scrollbar { display: none; }
+  .food-cats > button {
+    flex: none; width: 75px; height: 75px; padding-top: 10px;
+    display: flex; flex-direction: column; align-items: center; gap: 4px;
+    background: var(--white); border-radius: 10px; box-shadow: 0 0 7px rgba(0,0,0,.10);
+    -webkit-tap-highlight-color: transparent;
+  }
+  .food-cats > button:active { transform: scale(.96); }
+  .food-cats .ico { width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+  .food-cats .label { font-size: 12px; font-weight: 500; line-height: 1.5; color: var(--black); white-space: nowrap; }
+  .food-cats img { display: block; max-width: none; }
+  .food-cats .brand { width: 40px; height: 28px; object-fit: cover; }
+  /* noto-v1:pot-of-food (Figma 378:3660) — 벡터 3겹, 맨 위 겹은 클립 마스크 */
+  .food-cats .pot { position: relative; width: 40px; height: 40px; }
+  .food-cats .pot img { position: absolute; }
+  .food-cats .pot .a { left: 4.916px; top: 12.308px; }
+  .food-cats .pot .b { left: .084px; top: 10.844px; }
+  .food-cats .pot .c {
+    left: 4.124px; top: 12.76px;
+    -webkit-mask: url(img/food-cat-pot-mask.svg) -0.639px -1.408px / 31.585px 19.266px no-repeat;
+            mask: url(img/food-cat-pot-mask.svg) -0.639px -1.408px / 31.585px 19.266px no-repeat;
+    -webkit-mask-clip: no-clip; mask-clip: no-clip; mask-mode: alpha;
+  }
+  /* 타일 아래 20 → 구분선(232) → 16 → 제목(248, 24) → 34 → 카드(306) */
+  #food .divider { height: 0; margin: 20px var(--side) 0; border-top: 1px solid var(--g2); }
+  #food .section-title { margin: 15px var(--side) 0; font-size: 20px; font-weight: 700; line-height: 24px; color: #333; }
+  /* 추천 메뉴 카드(462:4812, 2026-09-28 개정): 181×318 카드가 두 칸(사이 14)·두 줄(사이 15), 좌우 18. 제목 아래 22.
+     좁은 화면에서는 두 칸이 같이 줄어든다 */
+  .menu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px 14px; margin-top: 22px; padding: 0 18px; }
+  .menu-card {
+    position: relative; min-height: 318px; padding: 21px 21px 21px; display: flex; flex-direction: column;
+    background: var(--white); border-radius: 10px; box-shadow: 0 0 7px rgba(0,0,0,.10);
+  }
+  /* 메뉴명(21) → 5 → 설명 두 줄(53) → 8 → 사진 139(109) → 5 → 조리 시간(253) → 2 → 가격(276) → 아래 21 */
+  .menu-card .name { margin: 0; text-align: center; font-size: 18px; font-weight: 700; line-height: 1.5; color: var(--g9); }
+  .menu-card .desc { margin-top: 5px; height: 48px; overflow: hidden; font-size: 16px; line-height: 1.5; color: var(--black); }
+  .menu-card .photo { margin-top: 8px; width: 100%; height: auto; aspect-ratio: 1; object-fit: cover; display: block; border-radius: 8px; }
+  /* 사진이 아직 없는 메뉴는 카테고리 아이콘을 연회색 바탕에 크게 넣어 자리를 잡는다 */
+  .menu-card .photo.ph { background: var(--g1); object-fit: contain; padding: 30px; }
+  .menu-card .photo-pot { position: relative; margin-top: 8px; width: 100%; aspect-ratio: 1; border-radius: 8px; background: var(--g1); overflow: hidden; }
+  .menu-card .photo-pot .pot { position: absolute; left: 50%; top: 50%; width: 40px; height: 40px; transform: translate(-50%, -50%) scale(2); }
+  .menu-card .photo-pot .pot img { position: absolute; }
+  .menu-card .photo-pot .pot .a { left: 4.916px; top: 12.308px; }
+  .menu-card .photo-pot .pot .b { left: .084px; top: 10.844px; }
+  .menu-card .photo-pot .pot .c {
+    left: 4.124px; top: 12.76px;
+    -webkit-mask: url(img/food-cat-pot-mask.svg) -0.639px -1.408px / 31.585px 19.266px no-repeat;
+            mask: url(img/food-cat-pot-mask.svg) -0.639px -1.408px / 31.585px 19.266px no-repeat;
+    -webkit-mask-clip: no-clip; mask-clip: no-clip; mask-mode: alpha;
+  }
+  /* 조리 시간(475:3821): 시계 16 + 14px 글, 높이 21, 오른쪽 안쪽 6. 전역 .chip 과 이름이 겹치지 않게 .time */
+  .menu-card .time {
+    align-self: flex-start; margin-top: 5px; display: flex; align-items: center; padding-right: 6px;
+    border-radius: 4px; background: var(--g1); font-size: 14px; font-weight: 500; line-height: 1.5; color: var(--g8); white-space: nowrap;
+  }
+  .menu-card .time img { display: block; width: 16px; height: 16px; }
+  .menu-card .price { margin-top: 2px; font-size: 18px; font-weight: 800; line-height: 21px; color: var(--black); white-space: nowrap; }
+  /* 담기 버튼(495:3860 + 495:3872): 카드 오른쪽 아래(오른쪽 16, 위 257 = 아래 25) 36×36 둥근 네모(모서리 8, 바탕 Gray1, 그림자 25%) + 더하기 아이콘 */
+  .menu-card .add {
+    position: absolute; right: 16px; bottom: 25px; width: 36px; height: 36px; border-radius: 8px;
+    background: var(--g1); box-shadow: 0 0 7px rgba(0,0,0,.25);
+    -webkit-tap-highlight-color: transparent; transition: transform .05s;
+  }
+  .menu-card .add img { display: block; width: 36px; height: 36px; }
+  .menu-card .add:active { transform: scale(.94); }
+
+  .fade-in { animation: fade .25s ease-out both; }
+  @keyframes fade { from { opacity: 0; } to { opacity: 1; } }
+</style>
+</head>
+<body>
+<div class="app" id="app">
+
+  <!-- 1. 스플래쉬 (Figma 1:2631) -->
+  <section class="screen active" id="splash" data-route="splash" aria-label="스플래쉬">
+    <img src="splash.svg" alt="2026 성시경 with friends 〈자, 오늘은〉 9.5 토 6PM – 9.6 일 6PM 88잔디마당" fetchpriority="high">
+    <button class="tap" aria-label="시작하기" data-go="verify"></button>
+  </section>
+
+  <!-- 2. 전화번호 인증 (Figma 3:3544) -->
+  <section class="screen" id="verify" data-route="verify">
+    <h1 class="h5 title">만나서 반가워요!</h1>
+    <form class="form" id="verifyForm" novalidate>
+      <div class="group">
+        <div class="field">
+          <label for="name">이름</label>
+          <div class="input white"><input id="name" name="name" type="text" autocomplete="name"></div>
+        </div>
+        <div class="field">
+          <label for="phone">전화번호</label>
+          <div class="input white" id="phoneBox"><input id="phone" name="phone" type="tel" inputmode="numeric" placeholder="000-0000-0000" maxlength="13" autocomplete="tel" aria-describedby="phoneError"></div>
+          <div class="hint error" id="phoneError" hidden>숫자만 입력해주세요.</div>
+        </div>
+        <button type="button" class="btn btn-l btn-outline btn-block" id="resend" disabled>인증번호 발송하기</button>
+      </div>
+      <div class="field" id="codeField" hidden>
+        <label for="code">인증코드</label>
+        <div class="input outlined"><input id="code" name="code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"></div>
+        <div class="hint" id="timer">03:00</div>
+      </div>
+      <button type="submit" class="btn btn-xl btn-primary btn-block submit" id="verifySubmit" hidden>전화번호 인증하기</button>
+    </form>
+  </section>
+
+  <!-- 3. 예매티켓 확인 (Figma 3:3609) -->
+  <section class="screen" id="ticket" data-route="ticket">
+    <header class="header"><h1 class="title">티켓 정보</h1></header>
+    <div class="progress" role="progressbar" aria-valuenow="100" aria-valuemin="0" aria-valuemax="100"><i></i></div>
+    <div class="body">
+      <div class="notfound">
+        <p class="h6">티켓 정보가 확인되지 않아요.</p>
+        <div class="choices">
+          <button type="button" class="btn btn-l btn-block choice" data-choice="buy" data-state="selected" aria-pressed="true">현장 티켓 구매하기</button>
+          <button type="button" class="btn btn-l btn-block choice" data-choice="ask" data-state="idle" aria-pressed="false">문의하기</button>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="confirm">
+        <p class="h6">예매하신 티켓의 정보를 확인해 주세요.</p>
+        <div class="field">
+          <label>이름</label>
+          <div class="input readonly">홍길동</div>
+        </div>
+        <div class="datetime">
+          <div class="field">
+            <label>공연예정일시</label>
+            <div class="input readonly center">2026&nbsp;&nbsp;년</div>
+          </div>
+          <div class="field"><div class="input readonly center">9&nbsp;&nbsp;월</div></div>
+          <div class="field"><div class="input readonly center">6&nbsp;&nbsp;일</div></div>
+          <div class="field"><div class="input readonly center">18 : 00</div></div>
+        </div>
+        <div class="field">
+          <label>공연명</label>
+          <div class="chip">성시경의 자, 오늘은</div>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-actions">
+      <button type="button" class="btn btn-xl btn-gray back" data-go="verify">뒤로</button>
+      <button type="button" class="btn btn-xl btn-primary next" data-go="generating">다음</button>
+    </div>
+  </section>
+
+  <!-- 4. 입장번호 생성 (Figma 5:3955) -->
+  <section class="screen flex-col center-stage" id="generating" data-route="generating">
+    <div class="inner">
+      <div class="msg">
+        <p class="h5">공연장 입장 순서를 생성 중...</p>
+        <p class="b1">입장하실 시간을 생성하고 있어요. 잠시만 기다려주세요!</p>
+      </div>
+      <div class="ring" role="status" aria-label="생성 중">
+        <svg viewBox="0 0 251 251" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M250 125C250 194.036 194.036 250 125 250C55.9644 250 0 194.036 0 125C0 55.9644 55.9644 0 125 0C194.036 0 250 55.9644 250 125ZM6.25 125C6.25 190.584 59.4162 243.75 125 243.75C190.584 243.75 243.75 190.584 243.75 125C243.75 59.4162 190.584 6.25 125 6.25C59.4162 6.25 6.25 59.4162 6.25 125Z" fill="#BEC1C7"/>
+          <g class="arc">
+            <mask id="m4" style="mask-type:alpha" maskUnits="userSpaceOnUse" x="121" y="55" width="130" height="196">
+              <path d="M225.6 56.2015C227.024 55.2273 228.973 55.5905 229.911 57.039C241.858 75.4809 248.742 96.7639 249.843 118.746C250.997 141.77 245.761 164.665 234.714 184.898C223.668 205.132 207.241 221.917 187.25 233.397C168.163 244.358 146.538 250.076 124.564 249.999C122.838 249.993 121.479 248.551 121.528 246.826C121.578 245.1 123.016 243.746 124.742 243.75C145.563 243.795 166.05 238.364 184.137 227.977C203.129 217.071 218.734 201.125 229.228 181.903C239.723 162.681 244.697 140.932 243.601 119.059C242.558 98.2278 236.047 78.0577 224.75 60.5683C223.814 59.1185 224.175 57.1758 225.6 56.2015Z" fill="#C60707" stroke="black"/>
+            </mask>
+            <g mask="url(#m4)">
+              <path d="M215.435 43.2989C216.715 42.1419 218.695 42.2397 219.819 43.5488C240.691 67.8444 251.466 99.2661 249.839 131.334C248.16 164.443 233.396 195.529 208.796 217.753C184.196 239.978 151.776 251.519 118.666 249.839C86.5986 248.213 56.4289 234.312 34.3704 211.089C33.1818 209.838 33.2849 207.858 34.5655 206.702C35.8462 205.545 37.8194 205.648 39.0097 206.898C59.9557 228.892 88.5709 242.055 118.983 243.597C150.437 245.193 181.237 234.229 204.606 213.116C227.976 192.003 242.002 162.471 243.597 131.017C245.14 100.605 234.941 70.8045 215.18 47.7401C214.057 46.4295 214.154 44.4559 215.435 43.2989Z" fill="#B695E3" stroke="#E5C3C3"/>
+            </g>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- 5. 입장번호 (Figma 5:3979) -->
+  <section class="screen flex-col center-stage" id="number" data-route="number">
+    <div class="inner">
+      <div class="msg">
+        <p class="h5">공연장 입장 순서를 생성 중...</p>
+        <p class="b1">입장하실 시간을 생성하고 있어요. 잠시만 기다려주세요!</p>
+      </div>
+      <button type="button" class="ring" data-go="entry" aria-label="입장번호 369, 눌러서 입장정보 보기">
+        <svg viewBox="0 0 251 251" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M250 125C250 194.036 194.036 250 125 250C55.9644 250 0 194.036 0 125C0 55.9644 55.9644 0 125 0C194.036 0 250 55.9644 250 125ZM6.25 125C6.25 190.584 59.4162 243.75 125 243.75C190.584 243.75 243.75 190.584 243.75 125C243.75 59.4162 190.584 6.25 125 6.25C59.4162 6.25 6.25 59.4162 6.25 125Z" fill="#B695E3"/>
+        </svg>
+        <span class="num" id="entryNumber">369</span>
+      </button>
+    </div>
+  </section>
+
+  <!-- 6. 입장정보 = 홈 (Figma 5:3811) -->
+  <section class="screen info" id="entry" data-route="entry">
+    <div class="panel"></div>
+    <header class="header">
+      <button type="button" class="name" data-go="profile" data-profile-name aria-label="홍길동 프로필">
+        <span>홍길동</span>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M12.172 12L9.34302 9.172L10.757 7.757L15 12L10.757 16.243L9.34302 14.828L12.172 12Z" fill="#6A4A96"/></svg>
+      </button>
+    </header>
+    <div class="content">
+      <div class="cards">
+        <div class="card countdown">
+          <div class="txt">
+            <span class="label">공연장 입장 전까지</span>
+            <span class="min" data-minutes>60</span>
+            <span class="label">분 입니다.</span>
+          </div>
+          <span class="spacer"></span>
+        </div>
+        <div class="card help">
+          <p class="h5">실시간 도움 받기</p>
+          <label class="search">
+            <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="M15.0259 13.8475L18.5951 17.4158L17.4159 18.595L13.8476 15.0258C12.5199 16.0902 10.8684 16.6691 9.16675 16.6667C5.02675 16.6667 1.66675 13.3067 1.66675 9.16667C1.66675 5.02667 5.02675 1.66667 9.16675 1.66667C13.3067 1.66667 16.6667 5.02667 16.6667 9.16667C16.6692 10.8683 16.0903 12.5198 15.0259 13.8475ZM13.3542 13.2292C14.4118 12.1416 15.0025 10.6837 15.0001 9.16667C15.0001 5.94333 12.3892 3.33333 9.16675 3.33333C5.94341 3.33333 3.33341 5.94333 3.33341 9.16667C3.33341 12.3892 5.94341 15 9.16675 15C10.6838 15.0024 12.1417 14.4118 13.2292 13.3542L13.3542 13.2292Z" fill="#B695E3"/></svg>
+            <input type="search" placeholder="불편하신 사항이나 궁금하신 점을 물어보세요." aria-label="실시간 도움 받기">
+          </label>
+        </div>
+      </div>
+      <p class="note">입장 시간 10분 전에 입장 통로에서 봐요!</p>
+      <div class="fields">
+        <div class="field"><label>입장 통로</label><div class="input readonly" data-gate>GATE A</div></div>
+        <div class="field"><label>공연장 입장 시간</label><div class="input readonly" data-time>14:00</div></div>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button type="button" class="fab ticket-fab" data-go="barcode" aria-label="입장 티켓 바코드 보기">
+        <img src="img/ticket-fab.svg" alt="" width="74" height="74">
+      </button>
+      <div class="nav-col"></div>
+    </div>
+  </section>
+
+  <!-- 7. 입장티켓 바코드 (Figma 380:3966) — 홈의 티켓 버튼으로 연다 -->
+  <section class="screen" id="barcode" data-route="barcode">
+    <div class="dialog" role="dialog" aria-modal="true" aria-label="입장 티켓 바코드" tabindex="-1">
+      <button type="button" class="close" data-close aria-label="닫기">
+        <img src="img/close.svg" alt="" width="48" height="48">
+      </button>
+      <div class="sheet">
+        <div class="code"><img src="img/barcode.svg" alt="입장 티켓 바코드" width="303" height="227.25"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 8. 스토어 (Figma 5:7504) — 디자인 파일에서 6번과 동일한 화면 -->
+  <!-- 8. MD 스토어 (Figma 26:7721) — 하단 내비의 스토어 탭 -->
+  <section class="screen flex-col" id="store" data-route="store">
+    <header class="header"><h1 class="title">MD 스토어</h1></header>
+    <div class="progress" role="presentation"><i></i></div>
+    <div class="body">
+      <div class="menu-grid" aria-label="상품 목록">
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">성시경 공식 응원봉</h3>
+          <p class="desc">퍼플오션과 함께 빛나는 별</p>
+          <div class="photo-box"><img src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="69" height="149"></div>
+          <span class="time"><img src="img/product-icon.svg" alt="" width="14" height="14">구매가능</span>
+          <p class="price">42,000원</p>
+          <button type="button" class="add" aria-label="성시경 공식 응원봉 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button type="button" class="fab cart-fab" data-go="cart" aria-label="장바구니">
+        <img src="img/cart-fab.svg" alt="" width="74" height="74">
+      </button>
+      <div class="nav-col"></div>
+    </div>
+  </section>
+
+  <!-- 10. 내 정보 — 1단계: 이름·전화번호 확인, 인증번호 발송 (Figma 468:5144) -->
+  <section class="screen flex-col profile" id="profile" data-route="profile">
+    <header class="header">
+      <button type="button" class="back" data-back aria-label="뒤로"><img src="img/arrow-left.svg" alt="" width="24" height="24"></button>
+      <h1 class="title">내 정보</h1>
+      <span class="spacer" aria-hidden="true"></span>
+    </header>
+    <form class="body" id="profileForm" novalidate>
+      <h2 class="h5 heading">사용자 정보를 확인해주세요</h2>
+      <div class="stack">
+        <div class="group">
+          <div class="field">
+            <label for="pName">이름</label>
+            <div class="input white"><input id="pName" name="name" type="text" placeholder="홍길동" autocomplete="name"></div>
+          </div>
+          <div class="field">
+            <label for="pPhone">전화번호</label>
+            <div class="input white"><input id="pPhone" name="phone" type="tel" inputmode="numeric" placeholder="010-0000-0000" autocomplete="tel"></div>
+          </div>
+          <button type="button" class="btn btn-l btn-outline btn-block" id="pSend" disabled>인증번호 발송하기</button>
+        </div>
+      </div>
+      <div class="bottom">
+        <button type="submit" class="btn btn-xl btn-primary" id="pNext" disabled>다음</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 11. 내 정보 — 2단계: 인증코드 입력, 완료 (Figma 468:5156) -->
+  <section class="screen flex-col profile" id="profileCode" data-route="profile-code">
+    <header class="header">
+      <button type="button" class="back" data-back aria-label="뒤로"><img src="img/arrow-left.svg" alt="" width="24" height="24"></button>
+      <h1 class="title">내 정보</h1>
+      <span class="spacer" aria-hidden="true"></span>
+    </header>
+    <form class="body" id="profileCodeForm" novalidate>
+      <h2 class="h5 heading">사용자 정보를 확인해주세요</h2>
+      <div class="stack">
+        <div class="group">
+          <div class="field"><label>이름</label><div class="input readonly" data-p-name>홍길동</div></div>
+          <div class="field"><label>전화번호</label><div class="input readonly" data-p-phone>010-0000-0000</div></div>
+          <button type="button" class="btn btn-l btn-outline btn-block" id="pResend">인증번호 재발송하기</button>
+        </div>
+        <div class="field">
+          <label for="pCode">인증코드</label>
+          <div class="input white"><input id="pCode" name="code" type="text" inputmode="numeric" maxlength="6" placeholder="000000" autocomplete="one-time-code"></div>
+          <div class="hint" id="pTimer">03:00</div>
+        </div>
+      </div>
+      <div class="bottom">
+        <button type="button" class="btn btn-xl btn-gray" data-back>뒤로</button>
+        <button type="submit" class="btn btn-xl btn-primary" id="pDone" disabled>완료</button>
+      </div>
+    </form>
+  </section>
+
+  <!-- 12. 장바구니 (Figma 380:3796) — 카트 버튼으로 연다 -->
+  <section class="screen flex-col" id="cart" data-route="cart">
+    <header class="header"><h1 class="title">장바구니</h1></header>
+    <div class="progress" role="presentation"><i></i></div>
+    <div class="body">
+      <h2 class="section">음식</h2>
+      <article class="cart-item" data-stepper>
+        <img class="photo" src="img/food-yangnyeom.png" alt="양념치킨" width="80" height="80">
+        <h3 class="name">양념치킨</h3>
+        <p class="desc">오리지널 양념 맛</p>
+        <p class="price">15,000원</p>
+        <div class="qty" role="group" aria-label="양념치킨 수량">
+          <button type="button" data-step="-1" aria-label="양념치킨 수량 줄이기"><img src="img/cart-minus.svg" alt="" width="36" height="36"></button>
+          <span class="count" data-count aria-live="polite">0</span>
+          <button type="button" data-step="1" aria-label="양념치킨 수량 늘리기"><img src="img/cart-plus.svg" alt="" width="36" height="36"></button>
+        </div>
+      </article>
+      <h2 class="section sub">함께 먹어요</h2>
+      <article class="cart-item small" data-stepper>
+        <img class="photo" src="img/cart-zero-cola.png" alt="제로콜라" width="80" height="80">
+        <h3 class="name">제로콜라</h3>
+        <p class="desc">0칼로리 제로콜라</p>
+        <p class="price">3,000원</p>
+        <div class="qty" role="group" aria-label="제로콜라 수량">
+          <button type="button" data-step="-1" aria-label="제로콜라 수량 줄이기"><img src="img/cart-minus.svg" alt="" width="36" height="36"></button>
+          <span class="count" data-count aria-live="polite">0</span>
+          <button type="button" data-step="1" aria-label="제로콜라 수량 늘리기"><img src="img/cart-plus.svg" alt="" width="36" height="36"></button>
+        </div>
+      </article>
+      <h2 class="section store">MD 스토어</h2>
+      <article class="cart-item small" data-stepper>
+        <img class="photo contain" src="img/store-lightstick.png" alt="성시경 공식 응원봉" width="80" height="80">
+        <h3 class="name">성시경 공식 응원봉</h3>
+        <p class="desc">퍼플오션과 함께 빚나는 별</p>
+        <p class="price">42,000원</p>
+        <div class="qty" role="group" aria-label="성시경 공식 응원봉 수량">
+          <button type="button" data-step="-1" aria-label="성시경 공식 응원봉 수량 줄이기"><img src="img/cart-minus.svg" alt="" width="36" height="36"></button>
+          <span class="count" data-count aria-live="polite">0</span>
+          <button type="button" data-step="1" aria-label="성시경 공식 응원봉 수량 늘리기"><img src="img/cart-plus.svg" alt="" width="36" height="36"></button>
+        </div>
+      </article>
+    </div>
+    <div class="pay">
+      <div class="sum" aria-live="polite"><span>결제금액</span><span id="cartTotal">0 원</span></div>
+      <button type="button" class="btn btn-xl btn-primary order" id="cartOrder" disabled>주문하기</button>
+    </div>
+  </section>
+
+  <!-- 9. 먹거리 사전 주문 (Figma 25:7580) — 하단 내비의 먹거리 탭 -->
+  <section class="screen flex-col" id="food" data-route="food">
+    <header class="header">
+      <h1 class="title">사전 주문하기</h1>
+    </header>
+    <div class="progress" role="presentation"><i></i></div>
+    <div class="body">
+      <div class="food-cats" role="list" aria-label="음식 종류">
+        <button type="button" role="listitem" data-cat="taco" aria-pressed="false"><span class="ico"><img src="img/food-cat-taco.svg" alt="" width="40" height="40"></span><span class="label">타코</span></button>
+        <button type="button" role="listitem" data-cat="beef" aria-pressed="false"><span class="ico"><img src="img/food-cat-meat.svg" alt="" width="40" height="40"></span><span class="label">소고기</span></button>
+        <button type="button" role="listitem" data-cat="chicken" aria-pressed="false"><span class="ico"><img class="brand" src="img/food-brand-hosigi.png" alt="" width="40" height="28"></span><span class="label">치킨</span></button>
+        <button type="button" role="listitem" data-cat="pot" aria-pressed="false">
+          <span class="ico"><span class="pot">
+            <img class="a" src="img/food-cat-pot-a.svg" alt="" width="30.1551" height="18.3118">
+            <img class="b" src="img/food-cat-pot-b.svg" alt="" width="39.8287" height="26.8994">
+            <img class="c" src="img/food-cat-pot-c.svg" alt="" width="30.2157" height="20.7964">
+          </span></span><span class="label">전골</span>
+        </button>
+        <button type="button" role="listitem" data-cat="pot" aria-pressed="false">
+          <span class="ico"><span class="pot">
+            <img class="a" src="img/food-cat-pot-a.svg" alt="" width="30.1551" height="18.3118">
+            <img class="b" src="img/food-cat-pot-b.svg" alt="" width="39.8287" height="26.8994">
+            <img class="c" src="img/food-cat-pot-c.svg" alt="" width="30.2157" height="20.7964">
+          </span></span><span class="label">전골</span>
+        </button>
+      </div>
+      <div class="divider"></div>
+      <h2 class="section-title" id="menuTitle">추천메뉴</h2>
+      <div class="menu-grid" id="menuGrid" aria-labelledby="menuTitle">
+        <article class="menu-card">
+          <h3 class="name">양념치킨</h3>
+          <p class="desc">오리지널 양념 맛의 시크니쳐</p>
+          <img class="photo" src="img/food-yangnyeom.png" alt="양념치킨" width="139" height="139">
+          <span class="time"><img src="img/clock.svg" alt="" width="16" height="16">20분</span>
+          <p class="price">15,000원</p>
+          <button type="button" class="add" aria-label="양념치킨 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">양념치킨</h3>
+          <p class="desc">오리지널 양념 맛의 시크니쳐</p>
+          <img class="photo" src="img/food-yangnyeom.png" alt="양념치킨" width="139" height="139">
+          <span class="time"><img src="img/clock.svg" alt="" width="16" height="16">20분</span>
+          <p class="price">15,000원</p>
+          <button type="button" class="add" aria-label="양념치킨 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">양념치킨</h3>
+          <p class="desc">오리지널 양념 맛의 시크니쳐</p>
+          <img class="photo" src="img/food-yangnyeom.png" alt="양념치킨" width="139" height="139">
+          <span class="time"><img src="img/clock.svg" alt="" width="16" height="16">20분</span>
+          <p class="price">15,000원</p>
+          <button type="button" class="add" aria-label="양념치킨 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+        <article class="menu-card">
+          <h3 class="name">양념치킨</h3>
+          <p class="desc">오리지널 양념 맛의 시크니쳐</p>
+          <img class="photo" src="img/food-yangnyeom.png" alt="양념치킨" width="139" height="139">
+          <span class="time"><img src="img/clock.svg" alt="" width="16" height="16">20분</span>
+          <p class="price">15,000원</p>
+          <button type="button" class="add" aria-label="양념치킨 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>
+      </div>
+    </div>
+    <div class="bottom-nav">
+      <button type="button" class="fab cart-fab" data-go="cart" aria-label="장바구니">
+        <img src="img/cart-fab.svg" alt="" width="74" height="74">
+      </button>
+      <div class="nav-col"></div>
+    </div>
+  </section>
+
+</div>
+
+<!-- 하단 내비 아이콘 (Figma 내보내기). 시안대로 라벨 없이 아이콘만 두고 이름은 aria-label 로 남긴다. 활성 탭은 채운 아이콘(.on), 나머지는 선 아이콘(.off)
+     먹거리 fluent:food-16-regular / -filled · 홈 380:3960(선) / basil:home-solid · 스토어 ep:goods -->
+<template id="navTpl">
+  <nav class="tabbar glass" aria-label="하단 탭">
+    <span class="pill" aria-hidden="true"><i></i></span>
+    <a class="tab" href="#/food" data-tab="food" aria-label="먹거리">
+      <span class="ico">
+        <svg class="off" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M1.338 1.96099C1.495 1.36199 2.041 0.999988 2.615 0.999988C2.969 0.999988 3.291 1.13299 3.536 1.34999C3.80612 1.1234 4.14743 0.999207 4.5 0.999207C4.85257 0.999207 5.19388 1.1234 5.464 1.34999C5.71748 1.12397 6.04539 0.999354 6.385 0.999988C6.959 0.999988 7.505 1.36199 7.662 1.96099C7.812 2.53299 8 3.45499 8 4.49999C7.99998 5.08354 7.85404 5.65783 7.57547 6.17061C7.2969 6.68338 6.89455 7.11837 6.405 7.43599C6.134 7.61299 6 7.84099 6 8.03599V8.43199C6 8.45465 6.00133 8.47665 6.004 8.49799C6.038 8.74599 6.161 9.66699 6.276 10.622C6.389 11.559 6.5 12.581 6.5 13C6.5 13.5304 6.28929 14.0391 5.91421 14.4142C5.53914 14.7893 5.03043 15 4.5 15C3.96957 15 3.46086 14.7893 3.08579 14.4142C2.71071 14.0391 2.5 13.5304 2.5 13C2.5 12.58 2.611 11.56 2.724 10.622C2.839 9.66699 2.962 8.74599 2.996 8.49799L3 8.43199V8.03599C3 7.84099 2.866 7.61299 2.595 7.43599C2.10545 7.11837 1.7031 6.68338 1.42453 6.17061C1.14596 5.65783 1.00002 5.08354 1 4.49999C1 3.45499 1.188 2.53299 1.338 1.96099ZM6 4.99999C6 5.1326 5.94732 5.25977 5.85355 5.35354C5.75979 5.44731 5.63261 5.49999 5.5 5.49999C5.36739 5.49999 5.24021 5.44731 5.14645 5.35354C5.05268 5.25977 5 5.1326 5 4.99999V2.49999C5 2.36738 4.94732 2.2402 4.85355 2.14643C4.75979 2.05267 4.63261 1.99999 4.5 1.99999C4.36739 1.99999 4.24021 2.05267 4.14645 2.14643C4.05268 2.2402 4 2.36738 4 2.49999V4.99999C4 5.1326 3.94732 5.25977 3.85355 5.35354C3.75979 5.44731 3.63261 5.49999 3.5 5.49999C3.36739 5.49999 3.24021 5.44731 3.14645 5.35354C3.05268 5.25977 3 5.1326 3 4.99999V2.38499C3 2.28288 2.95944 2.18495 2.88724 2.11275C2.81503 2.04055 2.71711 1.99999 2.615 1.99999C2.449 1.99999 2.335 2.09899 2.305 2.21499C2.10793 2.96085 2.00546 3.72855 2 4.49999C1.99995 4.91702 2.10423 5.32745 2.30334 5.69388C2.50245 6.06032 2.79007 6.37112 3.14 6.59799C3.579 6.88299 4 7.38399 4 8.03599V8.43199C4 8.49865 3.99567 8.56532 3.987 8.63199C3.953 8.87799 3.831 9.79299 3.717 10.742C3.601 11.707 3.5 12.656 3.5 13C3.5 13.2652 3.60536 13.5196 3.79289 13.7071C3.98043 13.8946 4.23478 14 4.5 14C4.76522 14 5.01957 13.8946 5.20711 13.7071C5.39464 13.5196 5.5 13.2652 5.5 13C5.5 12.656 5.4 11.707 5.283 10.741C5.169 9.79299 5.047 8.87799 5.013 8.63099C5.00539 8.56524 5.00105 8.49916 5 8.43299V8.03699C5 7.38499 5.421 6.88399 5.86 6.59899C6.21007 6.37203 6.49778 6.06107 6.6969 5.69444C6.89601 5.32782 7.00021 4.91719 7 4.49999C7 3.56799 6.832 2.73599 6.695 2.21499C6.665 2.09999 6.55 1.99999 6.385 1.99999C6.28289 1.99999 6.18497 2.04055 6.11276 2.11275C6.04056 2.18495 6 2.28288 6 2.38499V4.99999ZM9 5.49999C9 4.30651 9.47411 3.16192 10.318 2.31801C11.1619 1.47409 12.3065 0.999988 13.5 0.999988C13.6326 0.999988 13.7598 1.05267 13.8536 1.14643C13.9473 1.2402 14 1.36738 14 1.49999V7.47299L14.019 7.64999C14.0986 8.39632 14.1749 9.143 14.248 9.88999C14.371 11.146 14.5 12.554 14.5 13C14.5 13.5304 14.2893 14.0391 13.9142 14.4142C13.5391 14.7893 13.0304 15 12.5 15C11.9696 15 11.4609 14.7893 11.0858 14.4142C10.7107 14.0391 10.5 13.5304 10.5 13C10.5 12.554 10.629 11.146 10.752 9.88999C10.815 9.25299 10.878 8.64299 10.925 8.19099L10.945 7.99999H10C9.73478 7.99999 9.48043 7.89463 9.29289 7.70709C9.10536 7.51956 9 7.2652 9 6.99999V5.49999ZM11.997 7.55299L11.976 7.75499C11.8978 8.4991 11.8218 9.24343 11.748 9.98799C11.621 11.275 11.5 12.618 11.5 13C11.5 13.2652 11.6054 13.5196 11.7929 13.7071C11.9804 13.8946 12.2348 14 12.5 14C12.7652 14 13.0196 13.8946 13.2071 13.7071C13.3946 13.5196 13.5 13.2652 13.5 13C13.5 12.617 13.379 11.275 13.252 9.98799C13.1787 9.24339 13.1027 8.49905 13.024 7.75499L13.003 7.55399L13 7.49999V2.03499C12.1669 2.15524 11.4049 2.57174 10.854 3.20814C10.303 3.84454 9.99978 4.6582 10 5.49999V6.99999H11.5C11.5701 7.00001 11.6394 7.01479 11.7035 7.04335C11.7675 7.07191 11.8248 7.11362 11.8717 7.16577C11.9186 7.21792 11.9539 7.27934 11.9755 7.34605C11.9971 7.41276 12.0044 7.48327 11.997 7.55299Z"/></svg>
+        <svg class="on" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M6.723 1.054C6.78917 1.0868 6.84725 1.13385 6.89307 1.19178C6.93889 1.2497 6.97131 1.31706 6.988 1.389C7.006 1.468 7.5 3.582 7.5 5C7.5 5.95 7.058 6.797 6.37 7.346C6.12 7.546 6 7.764 6 7.946V8.432C6 8.45533 6.00133 8.47733 6.004 8.498C6.038 8.746 6.161 9.667 6.276 10.622C6.389 11.559 6.5 12.581 6.5 13C6.5 13.5304 6.28929 14.0391 5.91421 14.4142C5.53914 14.7893 5.03043 15 4.5 15C3.96957 15 3.46086 14.7893 3.08579 14.4142C2.71071 14.0391 2.5 13.5304 2.5 13C2.5 12.58 2.611 11.56 2.724 10.622C2.839 9.667 2.962 8.746 2.996 8.498L3 8.432V7.946C3 7.764 2.88 7.546 2.63 7.346C2.27748 7.06499 1.99283 6.70815 1.7972 6.30199C1.60156 5.89584 1.49998 5.45082 1.5 5C1.5 3.587 1.99 1.484 2.012 1.39C2.038 1.27884 2.10089 1.17977 2.19042 1.10894C2.27995 1.03811 2.39084 0.999713 2.505 1C2.785 1 3.012 1.227 3.012 1.507V4.505C3.00806 4.57253 3.018 4.64015 3.04121 4.70369C3.06442 4.76723 3.1004 4.82534 3.14695 4.87442C3.19349 4.92351 3.2496 4.96254 3.31181 4.9891C3.37402 5.01566 3.44102 5.02918 3.50866 5.02884C3.57631 5.0285 3.64316 5.0143 3.7051 4.98711C3.76705 4.95992 3.82276 4.92033 3.8688 4.87077C3.91484 4.82121 3.95024 4.76275 3.9728 4.69898C3.99537 4.63521 4.00463 4.56749 4 4.5V1.5C4 1.36739 4.05268 1.24021 4.14645 1.14645C4.24021 1.05268 4.36739 1 4.5 1C4.63261 1 4.75979 1.05268 4.85355 1.14645C4.94732 1.24021 5 1.36739 5 1.5V4.526C5.00278 4.65728 5.05761 4.78208 5.15241 4.87294C5.24721 4.9638 5.37422 5.01328 5.5055 5.0105C5.63678 5.00772 5.76158 4.95289 5.85244 4.85809C5.9433 4.76329 5.99278 4.63628 5.99 4.505V1.505C5.99 1.226 6.216 1 6.496 1C6.518 1 6.616 1 6.723 1.054ZM9 5.5C9 4.30653 9.47411 3.16193 10.318 2.31802C11.1619 1.47411 12.3065 1 13.5 1C13.6326 1 13.7598 1.05268 13.8536 1.14645C13.9473 1.24021 14 1.36739 14 1.5V7.473L14.019 7.65C14.0985 8.39634 14.1749 9.14301 14.248 9.89C14.371 11.146 14.5 12.554 14.5 13C14.5 13.5304 14.2893 14.0391 13.9142 14.4142C13.5391 14.7893 13.0304 15 12.5 15C11.9696 15 11.4609 14.7893 11.0858 14.4142C10.7107 14.0391 10.5 13.5304 10.5 13C10.5 12.554 10.629 11.146 10.752 9.89C10.815 9.253 10.878 8.643 10.925 8.191L10.945 8H10C9.73478 8 9.48043 7.89464 9.29289 7.70711C9.10536 7.51957 9 7.26522 9 7V5.5Z"/></svg>
+      </span>
+    </a>
+    <a class="tab" href="#/entry" data-tab="entry" aria-label="홈">
+      <span class="ico">
+        <svg class="off home-line" viewBox="0 0 16.6998 18.3418" fill="none" aria-hidden="true"><path fill-rule="evenodd" clip-rule="evenodd" d="M9.90792 2.12584C9.48892 1.72371 8.93067 1.49915 8.34992 1.49915C7.76917 1.49915 7.21091 1.72371 6.79192 2.12584L2.16592 6.56584C2.05263 6.67468 1.97637 6.81634 1.94792 6.97084C1.39306 9.99231 1.35215 13.0858 1.82692 16.1208L1.93892 16.8418H4.91592V10.6308C4.91592 10.4319 4.99493 10.2412 5.13559 10.1005C5.27624 9.95986 5.467 9.88084 5.66592 9.88084H11.0339C11.2328 9.88084 11.4236 9.95986 11.5642 10.1005C11.7049 10.2412 11.7839 10.4319 11.7839 10.6308V16.8418H14.7609L14.8729 16.1218C15.3481 13.0865 15.3076 9.99269 14.7529 6.97084C14.7242 6.81622 14.6476 6.67454 14.5339 6.56584L9.90792 2.12584ZM5.75392 1.04384C6.45217 0.374009 7.38232 0 8.34992 0C9.31751 0 10.2477 0.374009 10.9459 1.04384L15.5729 5.48384C15.9129 5.80984 16.1429 6.23584 16.2279 6.69984C16.8112 9.88763 16.8541 13.1508 16.3549 16.3528L16.1749 17.5098C16.1395 17.742 16.0218 17.9537 15.8434 18.1064C15.665 18.2591 15.4377 18.3426 15.2029 18.3418H11.0339C10.835 18.3418 10.6442 18.2628 10.5036 18.1222C10.3629 17.9815 10.2839 17.7908 10.2839 17.5918V11.3808H6.41592V17.5918C6.41592 17.7908 6.3369 17.9815 6.19625 18.1222C6.05559 18.2628 5.86483 18.3418 5.66592 18.3418H1.49692C1.26209 18.3426 1.0348 18.2591 0.856406 18.1064C0.678012 17.9537 0.560378 17.742 0.524916 17.5098L0.344916 16.3528C-0.15427 13.1508 -0.111338 9.88763 0.471916 6.69984C0.556916 6.23584 0.786916 5.80984 1.12692 5.48284L5.75392 1.04384Z"/></svg>
+        <svg class="on home-solid" viewBox="0 0 24 24" fill="none" aria-hidden="true"><path d="M13.796 4.136C13.5629 3.89528 13.2838 3.70387 12.9753 3.57315C12.6667 3.44244 12.3351 3.37508 12 3.37508C11.6649 3.37508 11.3333 3.44244 11.0247 3.57315C10.7162 3.70387 10.4371 3.89528 10.204 4.136L5.405 9.092C5.13 9.376 4.945 9.736 4.873 10.126C4.29112 13.3042 4.24819 16.5576 4.746 19.75L4.922 20.88C4.978 21.237 5.286 21.5 5.647 21.5H9C9.13261 21.5 9.25979 21.4473 9.35355 21.3536C9.44732 21.2598 9.5 21.1326 9.5 21V14H14.5V21C14.5 21.1326 14.5527 21.2598 14.6464 21.3536C14.7402 21.4473 14.8674 21.5 15 21.5H18.353C18.5279 21.5006 18.6973 21.4383 18.8302 21.3245C18.963 21.2107 19.0506 21.0529 19.077 20.88L19.254 19.75C19.7518 16.5576 19.7089 13.3042 19.127 10.126C19.0557 9.73614 18.8702 9.37624 18.594 9.092L13.796 4.136Z"/></svg>
+      </span>
+    </a>
+    <a class="tab" href="#/store" data-tab="store" aria-label="스토어">
+      <span class="ico">
+        <svg class="on" viewBox="0 0 1024 1024" fill="none" aria-hidden="true"><path d="M192 352h640l64 544H128zm128 224h64V448h-64zm320 0h64V448h-64zM384 288h-64a192 192 0 1 1 384 0h-64a128 128 0 1 0-256 0"/></svg>
+        <svg class="off" viewBox="0 0 16 16" fill="none" aria-hidden="true"><path d="M5.00006 4.5V4.15156C5.00006 2.41719 6.336 1 8.00006 1C9.66413 1 11.0001 2.41719 11.0001 4.15156V4.5H13.0469C13.1711 4.49977 13.2908 4.5457 13.3829 4.62887C13.4751 4.71205 13.533 4.82651 13.5454 4.95L14.4454 13.95C14.4524 14.0195 14.4447 14.0896 14.4229 14.156C14.4011 14.2223 14.3657 14.2834 14.3189 14.3352C14.2721 14.387 14.215 14.4284 14.1512 14.4568C14.0874 14.4852 14.0183 14.4999 13.9485 14.5H2.05163C1.9818 14.4999 1.91277 14.4852 1.84897 14.4568C1.78518 14.4284 1.72804 14.387 1.68123 14.3352C1.63442 14.2834 1.59898 14.2223 1.5772 14.156C1.55542 14.0896 1.54777 14.0195 1.55475 13.95L2.45475 4.95C2.46716 4.82651 2.52506 4.71205 2.61719 4.62887C2.70931 4.5457 2.82908 4.49977 2.95319 4.5H5.00006ZM6.00006 4.5H10.0001V4.15156C10.0001 2.95625 9.0985 2 8.00006 2C6.90163 2 6.00006 2.95625 6.00006 4.15156V4.5ZM5.00006 5.5H3.40631L2.60475 13.5H13.3954L12.5938 5.5H11.0001V7C11.0001 7.13261 10.9474 7.25979 10.8536 7.35355C10.7599 7.44732 10.6327 7.5 10.5001 7.5C10.3675 7.5 10.2403 7.44732 10.1465 7.35355C10.0527 7.25979 10.0001 7.13261 10.0001 7V5.5H6.00006V7C6.00006 7.13261 5.94739 7.25979 5.85362 7.35355C5.75985 7.44732 5.63267 7.5 5.50006 7.5C5.36746 7.5 5.24028 7.44732 5.14651 7.35355C5.05274 7.25979 5.00006 7.13261 5.00006 7V5.5Z"/></svg>
+      </span>
+    </a>
+  </nav>
+</template>
+
+<script>
+(() => {
+  // 화면 자동 전환 시간 (ms)
+  const SPLASH_MS = 5000;        // 1. 스플래쉬 → 2. 전화번호 인증
+  const GENERATING_MS = 2800;    // 4. 입장번호 생성 → 5. 입장번호
+  const NUMBER_MS = 2500;        // 5. 입장번호 → 6. 입장정보
+
+  const app = document.getElementById('app');
+  const screens = [...document.querySelectorAll('.screen')];
+  const ROUTES = new Set(screens.map(s => s.dataset.route));
+  let current = null;
+  let previous = null;           // 바코드 창을 닫을 때 돌아갈 화면
+  let timers = [];
+
+  const clearTimers = () => { timers.forEach(clearTimeout); timers = []; };
+  const later = (fn, ms) => { const t = setTimeout(fn, ms); timers.push(t); return t; };
+
+  function go(route, replace = false) {
+    if (!ROUTES.has(route)) route = 'splash';
+    const hash = '#/' + route;
+    if (replace) history.replaceState(null, '', hash); else if (location.hash !== hash) { location.hash = hash; return; }
+    render(route);
+  }
+
+  function render(route) {
+    if (route === current) return;
+    clearTimers();
+    previous = current;
+    current = route;
+    screens.forEach(s => {
+      const on = s.dataset.route === route;
+      s.classList.toggle('active', on);
+      if (on) { s.classList.remove('fade-in'); void s.offsetWidth; s.classList.add('fade-in'); }
+    });
+    app.scrollTop = 0;
+    resetWindow();   // 화면을 바꿀 때 문서가 밀려 있으면 함께 되돌린다
+    // 화면 맨 위 색. 브라우저 탭에서는 theme-color(주소창 색)로 쓰고, 홈 화면 앱(standalone)에서는 iOS 가
+    // 상태바 배경을 body 배경색으로 칠하므로 body 에도 같은 색을 줘서 상태바와 화면이 한 색으로 이어지게 한다.
+    const topColor = (route === 'entry' || route === 'barcode') ? '#B695E3' : (route === 'splash' ? '#F6D28E' : '#F9FAFC');
+    document.querySelector('meta[name="theme-color"]').content = topColor;
+    if (STANDALONE) document.body.style.background = topColor;
+
+    if (route === 'splash') later(() => go('verify', true), SPLASH_MS);
+    if (route === 'verify') resetVerify();
+    if (route === 'ticket') pickChoice('buy');
+    if (route === 'profile-code') { syncProfileCode(); startTimer('pTimer'); }
+    if (route === 'profile') fillProfileForm();
+    if (route === 'generating') later(() => go('number', true), GENERATING_MS);
+    if (route === 'number') later(() => go('entry', true), NUMBER_MS);
+    if (route === 'entry' || route === 'store' || route === 'food') markTab(route);
+    // 바코드 창은 dialog 이므로 열리면 시트로, 닫히면 열었던 티켓 버튼으로 포커스를 옮긴다.
+    // 닫기 버튼에 직접 포커스를 주면 주소로 바로 열었을 때 아이콘 둘레에 브라우저 기본 포커스 링이 그려진다
+    if (route === 'barcode') document.querySelector('#barcode .dialog').focus({ preventScroll: true });
+    else if (previous === 'barcode' && route === 'entry') document.querySelector('#entry .ticket-fab').focus({ preventScroll: true });
+  }
+
+  // ─── 하단 내비 ───
+  document.querySelectorAll('.bottom-nav .nav-col').forEach(nav => nav.append(document.getElementById('navTpl').content.cloneNode(true)));
+  // 선택 캡슐(.pill)은 화면마다 내비 사본이 있어 그냥 두면 새 화면에서 이미 도착해 있다.
+  // 그래서 직전 탭 자리에 순간 이동시킨 뒤 새 탭 자리로 미끄러지게 해 탭을 바꿀 때마다 움직임이 보이게 한다
+  let lastTab = null;
+  function markTab(route) {
+    const to = TAB_ORDER.indexOf(route), from = lastTab === null ? to : TAB_ORDER.indexOf(lastTab);
+    document.querySelectorAll('.bottom-nav .tabbar').forEach(bar => {
+      bar.querySelectorAll('.tab').forEach(t => {
+        if (t.dataset.tab === route) t.setAttribute('aria-current', 'page'); else t.removeAttribute('aria-current');
+      });
+      const pill = bar.querySelector('.pill');
+      pill.classList.remove('lift');
+      bar.querySelectorAll('.tab.lift').forEach(t => t.classList.remove('lift'));
+      if (from !== to) {
+        pill.style.transition = 'none'; pill.style.transform = `translateX(${from * 100}%)`; void pill.offsetWidth; pill.style.transition = '';
+        // 떠오르기·가라앉기 애니메이션 (다시 시작되도록 클래스를 뗐다 붙인다)
+        pill.classList.add('lift');
+        const tab = bar.querySelector(`.tab[data-tab="${route}"]`); if (tab) tab.classList.add('lift');
+        setTimeout(() => { pill.classList.remove('lift'); if (tab) tab.classList.remove('lift'); }, 600);
+      }
+      pill.style.transform = `translateX(${to * 100}%)`;
+    });
+    lastTab = route;
+  }
+
+  // ─── 탭 화면 좌우 스와이프 ───
+  // 하단 탭 순서(먹거리 · 홈 · 스토어)대로, 왼쪽으로 스와이프하면 왼쪽 탭으로(홈 → 먹거리), 오른쪽으로 스와이프하면 오른쪽 탭으로 간다.
+  // 탭을 누른 것과 똑같이 go() 를 거치므로 화면 전환과 탭 아이콘 강조(채움)가 동일하게 처리된다.
+  const TAB_ORDER = ['food', 'entry', 'store'];
+  const SWIPE_MIN = 60;     // 이만큼(px) 이상 가로로 움직여야 스와이프로 본다
+  let swipe = null;
+  app.addEventListener('touchstart', e => {
+    swipe = null;
+    if (e.touches.length !== 1 || !TAB_ORDER.includes(current) || typing()) return;
+    if (e.target.closest('input, textarea, [data-stepper] .step, dialog')) return;
+    const t = e.touches[0];
+    swipe = { x: t.clientX, y: t.clientY, t: Date.now() };
+  }, { passive: true });
+  app.addEventListener('touchend', e => {
+    if (!swipe || !TAB_ORDER.includes(current)) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - swipe.x, dy = t.clientY - swipe.y;
+    const elapsed = Date.now() - swipe.t;
+    swipe = null;
+    if (elapsed > 800 || Math.abs(dx) < SWIPE_MIN || Math.abs(dx) < Math.abs(dy) * 2) return;   // 느리거나 짧거나 세로 스크롤이면 무시
+    const next = TAB_ORDER[TAB_ORDER.indexOf(current) + (dx < 0 ? -1 : 1)];
+    if (next) go(next);
+  }, { passive: true });
+  app.addEventListener('touchcancel', () => { swipe = null; }, { passive: true });
+
+  // ─── 먹거리 카테고리 → 메뉴 목록 ───
+  // 위쪽 카테고리 타일(타코·소고기·치킨·전골)을 누르면 제목이 그 타일 글자로 바뀌고 카드가 그 카테고리 메뉴로 바뀐다.
+  // 같은 타일을 다시 누르면 추천 메뉴로 돌아온다. 카드 배치·크기는 Figma 462:4810 그대로.
+  // 사진이 정해진 메뉴는 photo 에 파일을, 아직 없는 메뉴는 icon(카테고리 아이콘)을 임시로 쓴다.
+  const POT_HTML = `<span class="pot"><img class="a" src="img/food-cat-pot-a.svg" alt="" width="30.1551" height="18.3118"><img class="b" src="img/food-cat-pot-b.svg" alt="" width="39.8287" height="26.8994"><img class="c" src="img/food-cat-pot-c.svg" alt="" width="30.2157" height="20.7964"></span>`;
+  const CHICKEN = { name: '양념치킨', desc: '오리지널 양념 맛의 시크니쳐', photo: 'img/food-yangnyeom.png', time: '20분', price: '15,000원' };
+  const MENUS = {
+    recommend: { title: '추천메뉴', items: [CHICKEN, CHICKEN, CHICKEN, CHICKEN] },
+    taco: { title: '타코', items: [
+      { name: '비프 타코', desc: '양념 소고기와 살사를 얹은 타코', icon: 'img/food-cat-taco.svg', time: '10분', price: '7,000원' },
+      { name: '치킨 타코', desc: '바삭한 치킨과 아보카도 소스', icon: 'img/food-cat-taco.svg', time: '10분', price: '7,000원' },
+      { name: '새우 타코', desc: '탱글한 새우와 라임 크림', icon: 'img/food-cat-taco.svg', time: '12분', price: '8,000원' },
+      { name: '타코 세트', desc: '타코 2개와 나초, 음료', icon: 'img/food-cat-taco.svg', time: '15분', price: '13,000원' },
+    ] },
+    beef: { title: '소고기', items: [
+      { name: '등심 스테이크', desc: '숯불에 구운 등심 200g', icon: 'img/food-cat-meat.svg', time: '20분', price: '25,000원' },
+      { name: '소불고기', desc: '달콤한 양념의 서울식 불고기', icon: 'img/food-cat-meat.svg', time: '15분', price: '16,000원' },
+      { name: '갈비살 구이', desc: '고소한 갈비살 소금구이', icon: 'img/food-cat-meat.svg', time: '20분', price: '22,000원' },
+      { name: '소고기 덮밥', desc: '얇게 썬 소고기와 온센 계란', icon: 'img/food-cat-meat.svg', time: '12분', price: '12,000원' },
+    ] },
+    chicken: { title: '치킨', items: [
+      CHICKEN,
+      { name: '후라이드치킨', desc: '바삭하게 튀긴 오리지널', photo: 'img/food-yangnyeom.png', time: '20분', price: '14,000원' },
+      { name: '간장치킨', desc: '짭조름한 마늘 간장 소스', photo: 'img/food-yangnyeom.png', time: '20분', price: '15,000원' },
+      { name: '반반치킨', desc: '양념 반, 후라이드 반', photo: 'img/food-yangnyeom.png', time: '20분', price: '15,000원' },
+    ] },
+    pot: { title: '전골', items: [
+      { name: '김치 전골', desc: '묵은지와 돼지고기 듬뿍', pot: true, time: '25분', price: '18,000원' },
+      { name: '부대 전골', desc: '햄·소시지·라면 사리', pot: true, time: '20분', price: '17,000원' },
+      { name: '버섯 전골', desc: '모둠 버섯과 맑은 육수', pot: true, time: '20분', price: '16,000원' },
+      { name: '곱창 전골', desc: '얼큰한 소곱창 전골', pot: true, time: '30분', price: '24,000원' },
+    ] },
+  };
+  const menuGrid = document.getElementById('menuGrid');
+  const menuTitle = document.getElementById('menuTitle');
+  const catTiles = document.querySelectorAll('#food .food-cats [data-cat]');
+  let menuKey = 'recommend';
+  const photoHtml = m => m.photo ? `<img class="photo" src="${m.photo}" alt="${m.name}" width="139" height="139">`
+    : m.pot ? `<div class="photo-pot" role="img" aria-label="${m.name}">${POT_HTML}</div>`
+    : `<img class="photo ph" src="${m.icon}" alt="${m.name}" width="139" height="139">`;
+  function renderMenu(key) {
+    const menu = MENUS[key]; if (!menu) return;
+    menuKey = key;
+    menuTitle.textContent = menu.title;
+    menuGrid.innerHTML = menu.items.map(m => `
+        <article class="menu-card">
+          <h3 class="name">${m.name}</h3>
+          <p class="desc">${m.desc}</p>
+          ${photoHtml(m)}
+          <span class="time"><img src="img/clock.svg" alt="" width="16" height="16">${m.time}</span>
+          <p class="price">${m.price}</p>
+          <button type="button" class="add" aria-label="${m.name} 담기">
+            <img src="img/food-plus-36.svg" alt="" width="36" height="36">
+          </button>
+        </article>`).join('');
+    catTiles.forEach(t => t.setAttribute('aria-pressed', String(t.dataset.cat === key)));
+    menuGrid.classList.remove('fade-in'); void menuGrid.offsetWidth; menuGrid.classList.add('fade-in');
+  }
+  catTiles.forEach(t => t.addEventListener('click', () => {
+    if (!MENUS[t.dataset.cat]) return;
+    renderMenu(menuKey === t.dataset.cat ? 'recommend' : t.dataset.cat);
+  }));
+
+  // ─── 먹거리 수량 버튼 (0 이면 시안처럼 수량 칸을 비워 둔다) ───
+  document.querySelectorAll('[data-stepper]').forEach(card => {
+    const out = card.querySelector('[data-count]');
+    const minus = card.querySelector('[data-step="-1"]');
+    const min = 0;
+    let n = min;
+    const paint = () => { out.textContent = card.classList.contains('cart-item') ? String(n) : (n || ''); minus.disabled = n === min; };
+    card.addEventListener('click', e => {
+      const b = e.target.closest('[data-step]');
+      if (!b) return;
+      n = Math.max(min, Math.min(99, n + Number(b.dataset.step)));
+      paint();
+    });
+    paint();
+  });
+
+  // ─── 입장티켓 바코드 창 닫기 (X 아이콘, 카드 바깥 보라 바탕 탭, Esc) ───
+  // 홈에서 열었으면 '뒤로'와 똑같이 동작시켜 기록에 바코드 화면이 남지 않게 한다.
+  function closeBarcode() {
+    if (current !== 'barcode') return;
+    if (previous === 'entry') history.back(); else go('entry', true);
+  }
+  document.querySelector('#barcode .dialog').addEventListener('click', e => { if (!e.target.closest('.sheet')) closeBarcode(); });   // X 버튼도 카드 바깥이라 함께 닫힌다
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') closeBarcode(); });
+
+  // ─── 인증코드 타이머 (03:00) ───
+  let tick = null;
+  function startTimer(id = 'timer', onEnd) {
+    clearInterval(tick);
+    let left = 180;
+    const el = document.getElementById(id);
+    const paint = () => { el.textContent = String(Math.floor(left / 60)).padStart(2, '0') + ':' + String(left % 60).padStart(2, '0'); };
+    paint();
+    tick = setInterval(() => { left = Math.max(0, left - 1); paint(); if (left === 0) { clearInterval(tick); if (onEnd) onEnd(); } }, 1000);
+  }
+  // ─── 전화번호 인증 화면 상태: 입력 전(2-1) → 발송 후(인증코드 입력) ───
+  const vName = document.getElementById('name'), vPhone = document.getElementById('phone'), vSend = document.getElementById('resend');
+  const vCodeField = document.getElementById('codeField'), vCode = document.getElementById('code'), vSubmit = document.getElementById('verifySubmit');
+  let vSent = false;
+  const vPhoneBox = document.getElementById('phoneBox'), vPhoneError = document.getElementById('phoneError');
+  // 전화번호는 숫자(와 사이의 -)만. 그 밖의 글자가 들어오면 칸을 빨간 테두리로 바꾸고 '숫자만 입력해주세요.' 를 보인다 (Figma 503:5503)
+  const vPhoneBad = () => /[^\d-]/.test(vPhone.value);
+  // 숫자만 있을 때는 시안의 형식(000-0000-0000)대로 3-4-4 자리에 하이픈을 넣어 준다
+  const formatPhone = v => { const d = v.replace(/\D/g, '').slice(0, 11); return d.length <= 3 ? d : d.length <= 7 ? d.slice(0, 3) + '-' + d.slice(3) : d.slice(0, 3) + '-' + d.slice(3, 7) + '-' + d.slice(7); };
+  function paintPhone() {
+    const bad = vPhoneBad();
+    if (!bad) { const f = formatPhone(vPhone.value); if (f !== vPhone.value) vPhone.value = f; }
+    vPhoneBox.classList.toggle('error', bad); vPhoneError.hidden = !bad; vPhone.setAttribute('aria-invalid', String(bad));
+  }
+  const vFilled = () => vName.value.trim() !== '' && vPhone.value.trim() !== '' && !vPhoneBad();
+  // 입력 후(503:5328): 값이 있는 칸은 회색 채움, 둘 다 채워지면 발송 버튼이 테두리형에서 보라 채움형으로 바뀌며 켜진다
+  function paintVerify() {
+    paintPhone();
+    vName.parentElement.classList.toggle('filled', vName.value.trim() !== '');
+    vPhoneBox.classList.toggle('filled', vPhone.value.trim() !== '' && !vPhoneBad());
+    const ok = vFilled();
+    if (vSent) { vSend.classList.remove('btn-primary'); vSend.classList.add('btn-outline'); if (!ok) vSend.disabled = true; return; }
+    vSend.disabled = !ok; vSend.classList.toggle('btn-primary', ok); vSend.classList.toggle('btn-outline', !ok);
+  }
+  function resetVerify() {
+    vSent = false; clearInterval(tick);
+    vName.value = ''; vPhone.value = ''; vCode.value = ''; vCode.parentElement.classList.remove('done');
+    vSend.textContent = '인증번호 발송하기'; paintVerify();
+    vCodeField.hidden = true; vSubmit.hidden = true;
+    document.getElementById('timer').textContent = '03:00';
+  }
+  [vName, vPhone].forEach(i => i.addEventListener('input', paintVerify));
+  // 발송 후(503:5376): 발송 버튼은 테두리형으로 돌아가 타이머가 도는 동안 비활성, 인증코드 칸·타이머·'전화번호 인증하기'(코드 6자리 전엔 비활성) 가 나타난다.
+  // 타이머가 끝나면 발송 버튼이 다시 켜져 재발송할 수 있다
+  vSend.addEventListener('click', () => {
+    if (!vFilled()) return;
+    vSent = true; vCodeField.hidden = false; vSubmit.hidden = false; vCode.value = ''; vSubmit.disabled = true; vCode.parentElement.classList.remove('done');
+    vSend.classList.remove('btn-primary'); vSend.classList.add('btn-outline'); vSend.disabled = true;
+    startTimer('timer', () => { vSend.disabled = false; }); vCode.focus();
+  });
+  vCode.addEventListener('input', () => {
+    vCode.value = vCode.value.replace(/\D/g, '').slice(0, 6);
+    const done = vCode.value.length === 6;
+    vSubmit.disabled = !done; vCode.parentElement.classList.toggle('done', done);
+  });
+  document.getElementById('verifyForm').addEventListener('submit', e => {
+    e.preventDefault(); if (!vSent || vSubmit.disabled) return;
+    // 인증한 이름·전화번호를 프로필로 저장해 홈 헤더에 반영한다
+    profile = { name: vName.value.trim(), phone: vPhone.value.trim() };
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {}
+    applyProfile();
+    go('ticket');
+  });
+
+  // ─── 내 정보 (사용자 정보 수정) ───
+  // 이름·전화번호는 브라우저에 저장해 두고 홈·스토어 헤더의 이름에 반영한다.
+  const PROFILE_KEY = 'set.profile';
+  const readProfile = () => { try { return Object.assign({ name: '홍길동', phone: '010-0000-0000' }, JSON.parse(localStorage.getItem(PROFILE_KEY) || '{}')); } catch { return { name: '홍길동', phone: '010-0000-0000' }; } };
+  let profile = readProfile();
+  function applyProfile() {
+    document.querySelectorAll('[data-profile-name]').forEach(b => { b.querySelector('span').textContent = profile.name; b.setAttribute('aria-label', profile.name + ' 프로필'); });
+  }
+  applyProfile();
+  const pName = document.getElementById('pName'), pPhone = document.getElementById('pPhone'), pSend = document.getElementById('pSend'), pNext = document.getElementById('pNext');
+  const pCode = document.getElementById('pCode'), pDone = document.getElementById('pDone');
+  let codeSent = false;
+  const filled = () => pName.value.trim() !== '' && pPhone.value.trim() !== '';
+  function paintProfileButtons() { pSend.disabled = !filled(); pNext.disabled = !(filled() && codeSent); }
+  function fillProfileForm() { pName.value = profile.name; pPhone.value = profile.phone; codeSent = false; paintProfileButtons(); }
+  [pName, pPhone].forEach(i => i.addEventListener('input', () => { codeSent = false; paintProfileButtons(); }));
+  pSend.addEventListener('click', () => { codeSent = true; paintProfileButtons(); pNext.focus({ preventScroll: true }); });
+  document.getElementById('profileForm').addEventListener('submit', e => { e.preventDefault(); if (!pNext.disabled) go('profile-code'); });
+  function syncProfileCode() {
+    document.querySelector('[data-p-name]').textContent = pName.value.trim() || profile.name;
+    document.querySelector('[data-p-phone]').textContent = pPhone.value.trim() || profile.phone;
+    pCode.value = ''; pDone.disabled = true;
+  }
+  pCode.addEventListener('input', () => { pCode.value = pCode.value.replace(/\D/g, '').slice(0, 6); pDone.disabled = pCode.value.length !== 6; });
+  document.getElementById('pResend').addEventListener('click', () => { startTimer('pTimer'); pCode.focus(); });
+  document.getElementById('profileCodeForm').addEventListener('submit', e => {
+    e.preventDefault(); if (pDone.disabled) return;
+    profile = { name: pName.value.trim(), phone: pPhone.value.trim() };
+    try { localStorage.setItem(PROFILE_KEY, JSON.stringify(profile)); } catch {}
+    applyProfile();
+    go('entry');
+  });
+  // 헤더 화살표·뒤로 버튼: 왔던 화면으로. 기록에 남기지 않으려고 직전 화면이면 브라우저 뒤로가기를 쓴다
+  document.querySelectorAll('.profile [data-back]').forEach(b => b.addEventListener('click', () => {
+    const to = current === 'profile-code' ? 'profile' : 'entry';
+    if (previous === to) history.back(); else go(to, true);
+  }));
+
+  // ─── 티켓 정보: '현장 티켓 구매하기' / '문의하기' 두 단계 선택 ───
+  // 첫 탭: 그 버튼이 선택(보라 선)되고 다른 버튼은 대기로. 두 번째 탭: 확정(보라 채움·흰 글씨).
+  // 구매하기를 확정하면 채움이 보인 뒤 입장번호 생성으로 이어진다. 문의하기는 연결 화면이 정해지면 같은 자리에 잇는다
+  const ticketChoices = document.querySelectorAll('#ticket .choice');
+  function pickChoice(key, state = 'selected') {
+    ticketChoices.forEach(b => { const on = b.dataset.choice === key; b.dataset.state = on ? state : 'idle'; b.setAttribute('aria-pressed', String(on)); });
+  }
+  ticketChoices.forEach(b => b.addEventListener('click', () => {
+    const key = b.dataset.choice;
+    if (b.dataset.state === 'selected') {
+      pickChoice(key, 'filled');
+      if (key === 'buy') later(() => go('generating'), 180);
+    } else if (b.dataset.state === 'idle') {
+      pickChoice(key, 'selected');
+    }
+  }));
+
+  // ─― 장바구니 결제 금액: 모든 상품(추천 상품 포함)의 수량 × 가격 합. 수량은 0 부터 ―――
+  const cartTotal = document.getElementById('cartTotal');
+  function updateCartTotal() {
+    let sum = 0;
+    document.querySelectorAll('#cart .cart-item').forEach(c => {
+      const price = Number(c.querySelector('.price').textContent.replace(/[^\d]/g, ''));
+      const n = Number(c.querySelector('[data-count]').textContent) || 0;
+      sum += price * n;
+    });
+    cartTotal.textContent = sum.toLocaleString('ko-KR') + ' 원';
+    document.getElementById('cartOrder').disabled = sum === 0;   // 담은 것이 없으면 주문할 수 없다
+  }
+  document.getElementById('cart').addEventListener('click', e => { if (e.target.closest('[data-step]')) updateCartTotal(); });
+  updateCartTotal();
+
+  // ─── 버튼 라우팅 ───
+  app.addEventListener('click', e => {
+    const b = e.target.closest('[data-go]');
+    if (b) { e.preventDefault(); go(b.dataset.go); }
+  });
+
+  // ─── 확대/축소 차단 (iOS 는 뷰포트 메타의 user-scalable=no 를 무시함) ───
+  document.addEventListener('gesturestart', e => e.preventDefault());
+  document.addEventListener('gesturechange', e => e.preventDefault());
+  document.addEventListener('touchmove', e => { if (e.scale !== undefined && e.scale !== 1) e.preventDefault(); }, { passive: false });
+
+  // ─── 창(문서) 스크롤 되돌리기 ───
+  // 고정 사항 1: 화면은 주소창 바로 아래에서 시작하고 아래에 빈 띠가 생기면 안 된다. 그런데 iOS 는 입력창 포커스(키보드),
+  // .app 안쪽 스크롤 끝에서의 끌림, 뒤로가기 복원 등으로 문서 자체를 위로 밀어 둔 채 놔두는 경우가 있다.
+  // 그래서 입력 중(키보드가 필요한 때)이 아니면 여러 시점에 확인해서 맨 위로 되돌린다.
+  // window.scrollY 가 0 이어도 시각 뷰포트(visualViewport)만 밀려 있을 수 있어 offsetTop 도 같이 본다.
+  const vv = window.visualViewport;
+  const typing = () => { const a = document.activeElement; return !!a && /^(INPUT|TEXTAREA)$/.test(a.tagName); };
+  function resetWindow() {
+    if (window.scrollY || document.documentElement.scrollTop || document.body.scrollTop || (vv && vv.offsetTop > 0)) window.scrollTo(0, 0);
+    anchorToViewport();
+  }
+  // iOS Chrome 은 키보드가 닫힌 뒤 등에 window.scrollY 는 0 인데 시각 뷰포트만 주소창 높이만큼 아래로 밀린 채 두는 경우가 있다.
+  // 그러면 scrollTo(0,0) 은 아무 일도 못 하고, 화면 위가 주소창 밑에 숨고 아래에 body 배경 띠가 보인다.
+  // 그래서 밀린 만큼 .app 을 아래로 옮기고 높이를 실제 보이는 높이로 맞춰, 문서가 어떻게 놓여 있든 .app 이 보이는 영역을 정확히 채우게 한다.
+  function anchorToViewport() {
+    if (!vv || typing()) return;
+    const off = Math.max(0, Math.round(vv.offsetTop));
+    if (off > 0) { app.style.transform = `translateY(${off}px)`; app.style.height = Math.round(vv.height) + 'px'; }
+    else if (app.style.transform) { app.style.transform = ''; app.style.height = ''; }
+  }
+  function resetWindowSoon() { resetWindow(); [80, 300, 700].forEach(ms => setTimeout(resetWindow, ms)); }
+  window.addEventListener('focusout', resetWindowSoon);
+  window.addEventListener('load', resetWindowSoon);
+  window.addEventListener('pageshow', resetWindowSoon);
+  window.addEventListener('orientationchange', resetWindowSoon);
+  window.addEventListener('scroll', () => { if (!typing()) resetWindow(); }, { passive: true });
+  document.addEventListener('touchend', () => { if (!typing()) setTimeout(resetWindow, 50); }, { passive: true });
+  if (vv) {
+    vv.addEventListener('resize', () => { if (!typing()) resetWindowSoon(); });
+    vv.addEventListener('scroll', () => { if (!typing()) resetWindow(); });
+  }
+
+  // ─── 뷰포트 진단 (주소에 ?vv=1 을 붙이면 왼쪽 위에 수치를 표시) ───
+  if (/[?&]vv=1/.test(location.search)) {
+    const box = document.createElement('pre');
+    box.style.cssText = 'position:fixed;left:4px;top:4px;z-index:9999;margin:0;padding:6px 8px;font:11px/1.35 monospace;background:rgba(0,0,0,.75);color:#0f0;border-radius:6px;pointer-events:none;white-space:pre';
+    document.body.appendChild(box);
+    const probe = document.createElement('div'); probe.style.cssText = 'position:absolute;height:100dvh;width:0;visibility:hidden'; document.body.appendChild(probe);
+    const paint = () => { box.textContent =
+      `innerH ${innerHeight}  dvh ${probe.offsetHeight}\nvv.h ${vv ? Math.round(vv.height) : '-'}  vv.offTop ${vv ? Math.round(vv.offsetTop) : '-'}  vv.pageTop ${vv ? Math.round(vv.pageTop) : '-'}\nscrollY ${Math.round(scrollY)}  docH ${document.documentElement.scrollHeight}  bodyH ${document.body.offsetHeight}\napp.h ${app.clientHeight}  app.top ${Math.round(app.getBoundingClientRect().top)}  tf ${app.style.transform || '-'}\nstandalone ${STANDALONE}  ua ${/CriOS/.test(navigator.userAgent) ? 'Chrome' : /Safari/.test(navigator.userAgent) ? 'Safari' : '?'}`; };
+    paint(); setInterval(paint, 500);
+  }
+
+  // ─── 해시 라우터 ───
+  const fromHash = () => (location.hash.replace(/^#\/?/, '') || 'splash');
+  window.addEventListener('hashchange', () => render(ROUTES.has(fromHash()) ? fromHash() : 'splash'));
+  render(ROUTES.has(fromHash()) ? fromHash() : 'splash');
+  if (!location.hash) history.replaceState(null, '', '#/splash');
+})();
+</script>
+</body>
+</html>
